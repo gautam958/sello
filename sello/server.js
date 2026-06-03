@@ -11,10 +11,8 @@ const PORT = process.env.PORT || 3000;
 // Middleware setups
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "..", "orchestration")));
 app.use(express.static(__dirname));
 app.use("/images", express.static(path.join(__dirname, "..", "Images")));
-
 // Path Definitions
 const USERS_FILE = path.join(__dirname, "users.json");
 const ITEMS_FILE = path.join(__dirname, "items.json");
@@ -452,7 +450,7 @@ app.delete("/api/admin/items/:id", async (req, res) => {
 
 // Catch-all route to serve the SPA setup cleanly
 app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "orchestration", "index.html"));
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 app.listen(PORT, () => {
