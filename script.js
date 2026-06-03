@@ -40,9 +40,9 @@ function setupNavbar() {
 
   if (user) {
     if (user.role === "admin") {
-      html += `<a href="admin.html">Admin Items</a>`;
+      html += `<a href="admin.html">Item Management Dashboard</a>`;
     }
-    html += `<span style="margin-left: 1rem;">Welcome, ${user.username} (${user.role})</span>`;
+    html += `<span style="margin-left: 1rem; font-weight: 600; color: var(--primary-color);">👋 ${user.username} (${user.role})</span>`;
     html += `<button id="logout-btn" class="btn" style="background-color: var(--danger-color); margin-left: 1rem;">Logout</button>`;
   } else {
     html += `<a href="login.html">Login</a>`;
@@ -69,7 +69,8 @@ async function loadMarketplaceItems() {
     const visibleItems = items.filter((item) => item.enabled);
 
     if (visibleItems.length === 0) {
-      grid.innerHTML = "<p>No items available at the moment.</p>";
+      grid.innerHTML =
+        "<p>No active inventory listings have been published matching visibility scopes.</p>";
       return;
     }
 
@@ -79,7 +80,7 @@ async function loadMarketplaceItems() {
         const processingBaselinePrice =
           topBidValue > 0 ? topBidValue : item.price;
 
-        // FIXED: Replaced lowercase folder route with backend's capitalized Images route
+        // FIXED: Replaces the lowercase database string folder with the capitalized folder name hosted on your server
         let imgSrc = "https://placehold.co/600x400?text=No+Image";
         if (item.image) {
           imgSrc = item.image.startsWith("http")
@@ -89,13 +90,17 @@ async function loadMarketplaceItems() {
 
         return `
           <div class="card">
+              <span class="status-badge status-available">Active Offers</span>
               <img src="${imgSrc}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'">
               <div class="card-content">
                   <h3 class="card-title">${item.name}</h3>
                   <p class="card-desc">${item.description}</p>
-                  <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Bids: ${item.bids ? item.bids.length : 0}</p>
+                  <p style="font-size:0.85rem; color:#64748b; margin-bottom:0.5rem;">Total Bids Count: <strong>${item.bids ? item.bids.length : 0}</strong></p>
                   <div class="card-footer">
-                      <span class="price">$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
+                      <div>
+                          <span style="font-size:0.75rem; display:block; color:#64748b;">Current Allocation Value</span>
+                          <span class="price">$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
+                      </div>
                       <button class="btn open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">
                           Book / Place Bid
                       </button>
@@ -106,11 +111,11 @@ async function loadMarketplaceItems() {
       })
       .join("");
 
-    // Safe event listener binding loop
+    // Safe dynamic binding call loop
     setupModalTriggers();
   } catch (err) {
     grid.innerHTML =
-      '<p style="color: var(--danger-color);">Failed to load items.</p>';
+      '<p style="color: var(--danger-color);">Network framework connection exception encountered.</p>';
   }
 }
 
@@ -119,7 +124,9 @@ function setupModalTriggers() {
     btn.addEventListener("click", (e) => {
       const user = getSessionUser();
       if (!user) {
-        alert("Please login to place a bid.");
+        alert(
+          "Unauthorized access layer block. Please log into an active account structure.",
+        );
         window.location.href = "login.html";
         return;
       }
@@ -163,9 +170,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const user = getSessionUser();
       const amount = parseFloat(document.getElementById("bid-amount").value);
 
-      // RESTORED: Exactly matches your original validation rule schema
-      if (amount <= 0) {
-        alert("Please enter a valid bid amount.");
+      // RESTORED: Exactly copies your original validation rule parameters
+      if (isNaN(amount) || amount <= 0) {
+        alert("Please assign a valid positive currency metric layout.");
         return;
       }
 
@@ -181,14 +188,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const data = await res.json();
         if (res.ok) {
-          alert("Bid placed successfully!");
+          alert("Bid written successfully. Notification processing triggered!");
           document.getElementById("bid-modal").style.display = "none";
           loadMarketplaceItems();
         } else {
-          alert(data.message || "Failed to place bid.");
+          alert(data.message || "Bidding submission tracking collision event.");
         }
       } catch (err) {
-        alert("Error connecting to server.");
+        alert("Could not interface with data handling nodes.");
       }
     });
 });
@@ -220,7 +227,7 @@ function setupLoginHandler() {
           errText.style.display = "block";
         }
       } catch (err) {
-        errText.innerText = "An error occurred during login.";
+        errText.innerText = "Connection initialization validation error.";
         errText.style.display = "block";
       }
     });
@@ -240,7 +247,7 @@ function setupSignupHandler() {
       const errText = document.getElementById("signup-error");
 
       if (password !== confirmPass) {
-        errText.innerText = "Passwords do not match.";
+        errText.innerText = "Error matching verification key sequence fields.";
         errText.style.display = "block";
         return;
       }
@@ -254,14 +261,17 @@ function setupSignupHandler() {
 
         const data = await res.json();
         if (res.ok) {
-          alert("Registration successful! Please login.");
+          alert(
+            "Registration configuration successfully written. Redirecting to login portal context.",
+          );
           window.location.href = "login.html";
         } else {
           errText.innerText = data.message;
           errText.style.display = "block";
         }
       } catch (err) {
-        errText.innerText = "An error occurred during signup.";
+        errText.innerText =
+          "Operational server failure during account creations lifecycle.";
         errText.style.display = "block";
       }
     });
@@ -271,7 +281,9 @@ function setupSignupHandler() {
 function checkAdminAccess() {
   const user = getSessionUser();
   if (!user || user.role !== "admin") {
-    alert("Access denied.");
+    alert(
+      "Access restriction layer violation. Root credentials signature missing.",
+    );
     window.location.href = "index.html";
   }
 }
@@ -296,12 +308,12 @@ async function loadAdminDashboard() {
               ? item.bids
                   .map(
                     (b) =>
-                      `<div style="border-bottom: 1px dashed #ccc; padding: 2px;">${b.userId}: $${b.bidAmount}</div>`,
+                      `<div style="border-bottom:1px dashed #cbd5e1; padding:2px; font-size:0.75rem;">👤 <strong>${b.userId}</strong>: <span style="color:var(--success-color);font-weight:bold;">$${b.bidAmount}</span></div>`,
                   )
                   .join("")
-              : "No bids yet";
+              : '<span style="color:#94a3b8; font-style:italic;">No historical bid nodes</span>';
 
-          // FIXED: Standardized admin dashboard static paths to support backend server capitalized path routes
+          // FIXED: Replaces the lowercase database string folder with the capitalized folder name inside admin view
           let adminImgSrc = "https://placehold.co/50?text=No+Img";
           if (item.image) {
             adminImgSrc = item.image.startsWith("http")
@@ -312,15 +324,15 @@ async function loadAdminDashboard() {
           return `
             <tr>
                 <td><img src="${adminImgSrc}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'"></td>
-                <td>${item.name}</td>
-                <td>${item.description}</td>
+                <td><strong>${item.name}</strong></td>
+                <td style="max-width:200px; font-size:0.8rem; overflow:hidden; text-overflow:ellipsis;">${item.description}</td>
                 <td>$${parseFloat(item.price).toFixed(2)}</td>
-                <td>$${parseFloat(topBidValue).toFixed(2)}</td>
-                <td>${item.enabled ? "Enabled" : "Disabled"}</td>
-                <td>${historyRows}</td>
+                <td style="font-weight:700; color:var(--primary-color)">$${parseFloat(topBidValue).toFixed(2)}</td>
+                <td>${item.enabled ? "🟢 Visible" : "🔴 Suspended"}</td>
+                <td><div style="max-height:80px; overflow-y:auto; background:#f8fafc; padding:4px; border-radius:4px;">${historyRows}</div></td>
                 <td class="actions-cell">
-                    <button class="btn admin-edit-btn" data-id="${item.id}" style="background-color: #eab308; padding: 0.25rem 0.5rem; font-size: 0.8rem;">Edit</button>
-                    <button class="btn admin-del-btn" data-id="${item.id}" style="background-color: var(--danger-color); padding: 0.25rem 0.5rem; font-size: 0.8rem;">Delete</button>
+                    <button class="btn admin-edit-btn" data-id="${item.id}" style="background-color:#eab308; padding:0.25rem 0.5rem; font-size:0.8rem;">Edit</button>
+                    <button class="btn admin-del-btn" data-id="${item.id}" style="background-color:var(--danger-color); padding:0.25rem 0.5rem; font-size:0.8rem;">Delete</button>
                 </td>
             </tr>
           `;
@@ -342,7 +354,7 @@ async function loadAdminDashboard() {
           ),
         );
     } catch (err) {
-      console.error("Failed to fetch admin items.");
+      console.error("Dashboard list mapping context error.");
     }
   };
 
@@ -366,17 +378,17 @@ async function loadAdminDashboard() {
     try {
       const response = await fetch(url, { method, body: formData });
       if (response.ok) {
-        alert("Product saved successfully.");
+        alert("Product record set updated matching definitions.");
         form.reset();
         document.getElementById("item-id").value = "";
         if (cancelBtn) cancelBtn.style.display = "none";
         document.getElementById("form-submit-btn").innerText = "Save Product";
         fetchAdminItems();
       } else {
-        alert("Failed to save product.");
+        alert("Database transaction operation layout tracking fault.");
       }
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
     }
   });
 
@@ -402,20 +414,26 @@ function populateEditForm(items, id) {
   document.getElementById("item-desc").value = item.description;
   document.getElementById("item-enabled").checked = item.enabled;
 
-  document.getElementById("form-submit-btn").innerText = "Update Product";
+  document.getElementById("form-submit-btn").innerText =
+    "Update Product Configuration";
   const cancelBtn = document.getElementById("form-cancel-btn");
   if (cancelBtn) cancelBtn.style.display = "inline-block";
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function deleteItem(id, callback) {
-  if (!confirm("Are you sure you want to delete this item?")) return;
+  if (
+    !confirm(
+      "Are you certain you wish to completely drop this product configuration parameter node?",
+    )
+  )
+    return;
   try {
     const res = await fetch(`${API_BASE_URL}/admin/items/${id}`, {
       method: "DELETE",
     });
     if (res.ok) {
-      alert("Item deleted successfully.");
+      alert("Item entry completely expunged from context tracking records.");
       callback();
     }
   } catch (err) {
