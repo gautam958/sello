@@ -20,7 +20,6 @@ app.use(
 
 app.use(express.json());
 app.use(express.static(__dirname));
-app.use("/images", express.static(path.join(__dirname, "Images")));
 // Path Definitions
 const USERS_FILE = path.join(__dirname, "users.json");
 const ITEMS_FILE = path.join(__dirname, "items.json");
@@ -453,7 +452,7 @@ app.delete("/api/admin/items/:id", async (req, res) => {
     items = items.filter((i) => i.id !== id);
     await writeData(ITEMS_FILE, items);
     res.json({
-      message: "Entity structural space dropped mapping coordinates.",
+      message: "Item Removed Successfully.",
     });
   } catch (err) {
     res.status(500).json({ message: "Drop context array integrity fault." });
