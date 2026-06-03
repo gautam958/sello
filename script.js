@@ -79,24 +79,17 @@ async function loadMarketplaceItems() {
         const processingBaselinePrice =
           topBidValue > 0 ? topBidValue : item.price;
 
-        // FIXED: Handles absolute paths, fully-qualified URLs, and folder capitalization issues safely
+        // FIXED: Replaced lowercase folder route with backend's capitalized Images route
         let imgSrc = "https://placehold.co/600x400?text=No+Image";
         if (item.image) {
-          if (item.image.startsWith("http")) {
-            imgSrc = item.image;
-          } else if (
-            item.image.startsWith("/images/") ||
-            item.image.startsWith("/Images/")
-          ) {
-            imgSrc = item.image;
-          } else {
-            imgSrc = `/Images/${item.image}`;
-          }
+          imgSrc = item.image.startsWith("http")
+            ? item.image
+            : item.image.replace("/images/", "/Images/");
         }
 
         return `
           <div class="card">
-              <img src="${imgSrc}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'; this.onerror=null;">
+              <img src="${imgSrc}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'">
               <div class="card-content">
                   <h3 class="card-title">${item.name}</h3>
                   <p class="card-desc">${item.description}</p>
@@ -170,7 +163,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const user = getSessionUser();
       const amount = parseFloat(document.getElementById("bid-amount").value);
 
-      if (isNaN(amount) || amount <= 0) {
+      // RESTORED: Exactly matches your original validation rule schema
+      if (amount <= 0) {
         alert("Please enter a valid bid amount.");
         return;
       }
@@ -307,24 +301,17 @@ async function loadAdminDashboard() {
                   .join("")
               : "No bids yet";
 
-          // FIXED: Standardized admin dashboard static paths to support lowercase/uppercase mappings
+          // FIXED: Standardized admin dashboard static paths to support backend server capitalized path routes
           let adminImgSrc = "https://placehold.co/50?text=No+Img";
           if (item.image) {
-            if (item.image.startsWith("http")) {
-              adminImgSrc = item.image;
-            } else if (
-              item.image.startsWith("/images/") ||
-              item.image.startsWith("/Images/")
-            ) {
-              adminImgSrc = item.image;
-            } else {
-              adminImgSrc = `/Images/${item.image}`;
-            }
+            adminImgSrc = item.image.startsWith("http")
+              ? item.image
+              : item.image.replace("/images/", "/Images/");
           }
 
           return `
             <tr>
-                <td><img src="${adminImgSrc}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'; this.onerror=null;"></td>
+                <td><img src="${adminImgSrc}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'"></td>
                 <td>${item.name}</td>
                 <td>${item.description}</td>
                 <td>$${parseFloat(item.price).toFixed(2)}</td>
