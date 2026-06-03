@@ -17,20 +17,14 @@
       <div id="items-grid" class="grid"></div>
     </main>
 
-    <!-- Bid Modal -->
     <div id="bid-modal" class="bid-modal" style="display: none">
       <div class="modal-content">
         <span class="close-btn" id="modal-cancel-btn">&times;</span>
         <h2>Place Your Bid</h2>
         <div class="bid-info">
-          <p><strong>Item:</strong> <span id="modal-item-name"></span></p>
-          <p>
-            <strong>Minimum Price:</strong> <span id="modal-item-price"></span>
-          </p>
-          <p>
-            <strong>Current Highest Bid:</strong>
-            <span id="modal-highest-bid"></span>
-          </p>
+          <p><strong>Item:</strong> <span id=\"modal-item-name\"></span></p>
+          <p><strong>Minimum Price:</strong> <span id=\"modal-item-price\"></span></p>
+          <p><strong>Current Highest Bid:</strong> <span id=\"modal-highest-bid\"></span></p>
         </div>
         <div class="form-group">
           <label for="bid-amount">Your Bid Amount ($)</label>
@@ -38,13 +32,7 @@
         </div>
         <div style="display: flex; gap: 1rem; justify-content: center">
           <button id="modal-submit-btn" class="btn">Place Bid</button>
-          <button
-            id="modal-cancel-btn-button"
-            class="btn"
-            style="background-color: #64748b"
-          >
-            Cancel
-          </button>
+          <button id="modal-cancel-btn-button" class="btn" style="background-color: #64748b">Cancel</button>
         </div>
       </div>
     </div>

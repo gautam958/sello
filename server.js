@@ -8,8 +8,7 @@ const nodemailer = require("nodemailer");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware setups
-// Allow requests from your GitHub Pages site
+// Configure CORS to accept requests from your production frontend site
 app.use(
   cors({
     origin: "https://gautam958.github.io",
@@ -19,14 +18,17 @@ app.use(
 );
 
 app.use(express.json());
-app.use(express.static(__dirname));
-// Path Definitions
+
+// Path Definitions - Lowercase folder matching production standard environments
 const USERS_FILE = path.join(__dirname, "users.json");
 const ITEMS_FILE = path.join(__dirname, "items.json");
-const UPLOAD_DIR = path.join(__dirname, "Images");
+const UPLOAD_DIR = path.join(__dirname, "images");
 
-// Ensure image upload architecture structure space exists
+// Ensure image upload directory layout space exists natively
 fs.ensureDirSync(UPLOAD_DIR);
+
+// Explicitly serve static assets out of the upload folder across the /images route web space
+app.use("/images", express.static(UPLOAD_DIR));
 
 // Storage Engine Config for Multer
 const storage = multer.diskStorage({
@@ -40,133 +42,48 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// Email Transporter Layer Initialization (Configure via environment files optimally)
+// Email Transporter Layer Initialization
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "gautam958@gmail.com", // Replace with system outbox email account
-    pass: "whnp dbfr xfvy xusm", // Replace with system security App Password (NOT regular password)
+    user: "your-email-address@gmail.com", // Replace with your standard system Gmail
+    pass: "your-app-password", // Replace with your generated App Password
   },
 });
 
-// Verify email connection on startup
-transporter.verify((error, success) => {
-  if (error) {
-    console.error(
-      "❌ EMAIL SERVICE OFFLINE - Check credentials:",
-      error.message,
-    );
-    console.error(
-      "⚠️  Note: Gmail requires an APP-SPECIFIC PASSWORD, not your regular password.",
-    );
-    console.error(
-      "📱 Generate one at: https://myaccount.google.com/apppasswords",
-    );
-  } else {
-    console.log("✅ EMAIL SERVICE ONLINE - Ready to send notifications");
-  }
-});
-
-// Helper validation handlers
+// Helper validation reading functions
 const readData = async (file) => JSON.parse(await fs.readFile(file, "utf8"));
 const writeData = async (file, data) =>
   await fs.writeFile(file, JSON.stringify(data, null, 2), "utf8");
 
-const requireAuth = (req, res, next) => {
-  const { user } = req.body;
-  if (!user || typeof user !== "string" || !user.trim()) {
-    return res
-      .status(401)
-      .json({ message: "Authentication required to book items." });
-  }
-  next();
-};
-
 // ---------------- REST APIS ENDPOINTS ----------------
 
-app.get("/", (req, res) => {
-  res.send("API is running");
-});
-
-// USER REGISTRATION ROOT
-app.post("/api/register", async (req, res) => {
-  const { username, password, email } = req.body;
-  const normalizedEmail = email ? email.trim().toLowerCase() : "";
-
-  if (
-    !username ||
-    !username.trim() ||
-    !password ||
-    !normalizedEmail ||
-    !normalizedEmail.includes("@")
-  ) {
-    return res.status(400).json({
-      message: "Username, password, and a valid email address are required.",
-    });
-  }
-
+// USER REGISTRATION
+app.post("/api/signup", async (req, res) => {
+  const { username, email, password } = req.body;
   try {
     const users = await readData(USERS_FILE);
-    const existingUsername = users.find((u) => u.username === username);
-    const existingEmail = users.find((u) => u.email === normalizedEmail);
-    if (existingUsername) {
-      return res
-        .status(409)
-        .json({ message: "This username is already registered." });
+    if (users.find((u) => u.username === username)) {
+      return res.status(400).json({ message: "Username already indexed." });
     }
-    if (existingEmail) {
-      return res
-        .status(409)
-        .json({ message: "This email is already registered." });
-    }
-
     const newUser = {
       username,
+      email,
       password,
-      email: normalizedEmail,
       role: "user",
       createdAt: new Date().toISOString(),
     };
-
     users.push(newUser);
     await writeData(USERS_FILE, users);
-
-    const mailOptions = {
-      from: "gautam958@gmail.com",
-      to: "gautam958@gmail.com",
-      subject: `New user registered: ${username}`,
-      html: `
-        <h2>New registration received</h2>
-        <p><strong>Username:</strong> ${username}</p>
-        <p><strong>Email:</strong> ${normalizedEmail}</p>
-        <p><strong>Role:</strong> user</p>
-        <p><strong>Registered at:</strong> ${new Date().toUTCString()}</p>
-      `,
-    };
-
-    try {
-      await transporter.sendMail(mailOptions);
-      console.log("✅ Signup notification email sent to admin");
-    } catch (emailError) {
-      console.error("❌ Signup notification email failed:", emailError.message);
-    }
-
-    const cleanUser = {
-      username: newUser.username,
-      email: newUser.email,
-      role: newUser.role,
-      createdAt: newUser.createdAt,
-    };
-
-    res
-      .status(201)
-      .json({ message: "Registration successful.", user: cleanUser });
+    res.status(201).json({ message: "Account created successfully." });
   } catch (err) {
-    res.status(500).json({ message: "Unable to complete registration." });
+    res
+      .status(500)
+      .json({ message: "Error mapping signup persistence arrays." });
   }
 });
 
-// USER SIGN IN ROOT
+// USER SIGN IN
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -178,107 +95,105 @@ app.post("/api/login", async (req, res) => {
     if (userIndex === -1) {
       return res
         .status(401)
-        .json({ message: "Invalid transactional security identifiers." });
+        .json({ message: "Invalid operational credentials." });
     }
 
     users[userIndex].lastLogin = new Date().toISOString();
     await writeData(USERS_FILE, users);
 
-    // Delete password from client transmission parameters
     const cleanUser = { ...users[userIndex] };
     delete cleanUser.password;
 
-    res.json({ message: "Authentication mapping verified.", user: cleanUser });
+    res.json({ message: "Authentication successful.", user: cleanUser });
   } catch (err) {
-    res.status(500).json({ message: "Internal server logic context error." });
+    res.status(500).json({ message: "Internal runtime server context error." });
   }
 });
 
-// READ OPERATIONS ITEMS
+// READ MARKETPLACE ITEMS
 app.get("/api/items", async (req, res) => {
   try {
     const items = await readData(ITEMS_FILE);
     res.json(items);
   } catch (err) {
-    res.status(500).json({ message: "Data fetch failed." });
+    res.status(500).json({ message: "Data fetch layer breakdown anomaly." });
   }
 });
 
-// ORDER AND BOOK TRANSACTION PROCESS HANDLER
-app.post("/api/items/book/:id", requireAuth, async (req, res) => {
+// MULTI-USER BIDDING / BOOKING ACTION ROUTE
+app.post("/api/items/book/:id", async (req, res) => {
   const itemId = req.params.id;
-  const { user } = req.body;
+  const { user, bidAmount } = req.body;
 
   try {
-    const users = await readData(USERS_FILE);
-    const bookingUser = users.find((u) => u.username === user);
-    if (!bookingUser || !bookingUser.email) {
-      return res.status(401).json({
-        message:
-          "Booking requires a logged-in account with a registered email.",
-      });
-    }
-
     const items = await readData(ITEMS_FILE);
     const target = items.find((i) => i.id === itemId);
 
     if (!target)
-      return res
-        .status(404)
-        .json({ message: "Target profile object missing." });
-    if (target.status === "Booked")
-      return res
-        .status(400)
-        .json({ message: "Collision event: Resource locked." });
+      return res.status(404).json({ message: "Target item record missing." });
+    if (!target.bids) target.bids = [];
 
-    // Mutation parameters mapping configuration
-    target.status = "Booked";
+    const parsedBid = parseFloat(bidAmount);
+    const currentHighestBid =
+      target.bids.length > 0
+        ? Math.max(...target.bids.map((b) => b.bidAmount))
+        : target.price;
+
+    if (parsedBid < currentHighestBid) {
+      return res.status(400).json({
+        message: `Bid must equal or exceed current high valuation of $${currentHighestBid}`,
+      });
+    }
+
+    const newBidEntry = {
+      userId: user,
+      bidAmount: parsedBid,
+      timestamp: new Date().toISOString(),
+    };
+
+    target.bids.push(newBidEntry);
+    target.highestBid = parsedBid;
+
     await writeData(ITEMS_FILE, items);
 
-    // Dispatches system transactional email to the booking user
+    // Dynamic transactional high-priority notification outbox broadcast
     const mailOptions = {
-      from: "gautam958@gmail.com",
-      to: bookingUser.email,
-      subject: `Your Sello booking is confirmed: ${target.name}`,
+      from: '"Sello Competitive Engine" <your-email-address@gmail.com>',
+      to: "gautam958@gmail.com",
+      subject: `🚨 HIGH PRIORITY: New High Bid Offer Registered [${target.name}]`,
       headers: {
         "X-Priority": "1",
         "X-MSMail-Priority": "High",
         Importance: "high",
       },
       html: `
-                <h2>Booking Confirmation</h2>
-                <hr/>
-                <p><strong>Item:</strong> ${target.name}</p>
-                <p><strong>Price:</strong> $${target.price}</p>
-                <p><strong>Status:</strong> ${target.status}</p>
-                <p><strong>Booked by:</strong> ${bookingUser.username}</p>
-                <p><strong>Recipient email:</strong> ${bookingUser.email}</p>
-                <p><strong>Timestamp:</strong> ${new Date().toUTCString()}</p>
-            `,
+        <h2>Marketplace Booking & Bidding Activity Log</h2>
+        <hr/>
+        <p><strong>Product Name:</strong> ${target.name}</p>
+        <p><strong>Base Price Value:</strong> $${target.price}</p>
+        <br/>
+        <h3 style="color:#2563eb;">New Incoming Position Added:</h3>
+        <p><strong>Associated Bidder:</strong> ${user}</p>
+        <p><strong>Submitted Amount:</strong> <span style="font-size:1.2rem; color:#22c55e; font-weight:bold;">$${parsedBid.toFixed(2)}</span></p>
+        <p><strong>Registration Timestamp:</strong> ${new Date(newBidEntry.timestamp).toUTCString()}</p>
+      `,
     };
 
-    try {
-      await transporter.sendMail(mailOptions);
-      console.log("✅ Booking confirmation email sent to:", bookingUser.email);
-    } catch (emailError) {
-      console.error(
-        "❌ Booking confirmation email failed:",
-        emailError.message,
-      );
-    }
-
-    res.json({
-      message: "Asset booking confirmed successfully.",
-      item: target,
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error)
+        console.error("SMTP delivery process tracking fault logs:", error);
+      else console.log("Mail transaction successful: " + info.response);
     });
+
+    res.json({ message: "Bid accepted and written safely.", item: target });
   } catch (err) {
     res
       .status(500)
-      .json({ message: "Error mapping allocation tracking mutations." });
+      .json({ message: "Error mapping bid collection structural entries." });
   }
 });
 
-// ADMIN: CREATE OPERATION
+// ADMIN: CREATE PRODUCT
 app.post("/api/admin/items", upload.single("image"), async (req, res) => {
   try {
     const items = await readData(ITEMS_FILE);
@@ -287,8 +202,9 @@ app.post("/api/admin/items", upload.single("image"), async (req, res) => {
       name: req.body.name,
       description: req.body.description,
       price: parseFloat(req.body.price),
-      status: req.body.status || "Available",
-      image: req.file ? `/images/${req.file.filename}` : "/images/default.jpg",
+      status: "Available",
+      // Storing ONLY the raw filename to isolate file storage paths out of data rows
+      image: req.file ? req.file.filename : "default.jpg",
       enabled: req.body.enabled === "true",
       bids: [],
       highestBid: 0,
@@ -296,176 +212,80 @@ app.post("/api/admin/items", upload.single("image"), async (req, res) => {
 
     items.push(newItem);
     await writeData(ITEMS_FILE, items);
-    res.status(211).json(newItem);
+    res.status(201).json(newItem);
   } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Failure appending parameters context matrix." });
+    res.status(500).json({
+      message: "Failure appending new product configuration parameters.",
+    });
   }
 });
 
-// PLACE BID ENDPOINT
-app.post("/api/items/bid/:id", requireAuth, async (req, res) => {
-  const itemId = req.params.id;
-  const { user, bidAmount } = req.body;
-
-  try {
-    const users = await readData(USERS_FILE);
-    const biddingUser = users.find((u) => u.username === user);
-    if (!biddingUser || !biddingUser.email) {
-      return res.status(401).json({
-        message:
-          "Bidding requires a logged-in account with a registered email.",
-      });
-    }
-
-    const items = await readData(ITEMS_FILE);
-    const target = items.find((i) => i.id === itemId);
-
-    if (!target) return res.status(404).json({ message: "Item not found." });
-
-    if (!target.enabled)
-      return res
-        .status(400)
-        .json({ message: "Item is not available for bidding." });
-
-    const bidAmountNum = parseFloat(bidAmount);
-    const minBidPrice = target.price * 0.5;
-
-    if (isNaN(bidAmountNum) || bidAmountNum <= 0) {
-      return res.status(400).json({
-        message: "Bid amount must be greater than 0.",
-      });
-    }
-
-    if (bidAmountNum < minBidPrice) {
-      return res.status(400).json({
-        message: `Bid must be greater than 0  and could be not less then 5-10% of the original price ($${minBidPrice.toFixed(2)}).`,
-      });
-    }
-
-    if (!target.bids) target.bids = [];
-    if (target.highestBid === undefined) target.highestBid = 0;
-
-    target.bids.push({
-      userId: biddingUser.username,
-      bidAmount: bidAmountNum,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Calculate highest bid as max from bids array
-    target.highestBid = Math.max(
-      ...target.bids.map((bid) => bid.bidAmount || 0),
-    );
-    await writeData(ITEMS_FILE, items);
-
-    const mailOptions = {
-      from: "gautam958@gmail.com",
-      to: biddingUser.email,
-      subject: `Your bid on ${target.name} has been placed!`,
-      headers: {
-        "X-Priority": "1",
-        "X-MSMail-Priority": "High",
-        Importance: "high",
-      },
-      html: `
-        <h2>Bid Confirmation</h2>
-        <hr/>
-        <p><strong>Item:</strong> ${target.name}</p>
-        <p><strong>Your Bid:</strong> $${bidAmountNum.toFixed(2)}</p>
-        <p><strong>Minimum Price:</strong> $${target.price}</p>
-        <p><strong>Current Highest Bid:</strong> $${target.highestBid.toFixed(2)}</p>
-        <p><strong>Timestamp:</strong> ${new Date().toUTCString()}</p>
-      `,
-    };
-
-    try {
-      await transporter.sendMail(mailOptions);
-      console.log("✅ Bid confirmation email sent to:", biddingUser.email);
-    } catch (emailError) {
-      console.error("❌ Bid confirmation email failed:", emailError.message);
-    }
-
-    res.json({
-      message: "Bid placed successfully.",
-      item: target,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error processing bid." });
-  }
-});
-
-// ADMIN: UPDATE OPERATION
+// ADMIN: UPDATE PRODUCT
 app.put("/api/admin/items/:id", upload.single("image"), async (req, res) => {
   const id = req.params.id;
   try {
     const items = await readData(ITEMS_FILE);
     const idx = items.findIndex((i) => i.id === id);
     if (idx === -1)
-      return res
-        .status(404)
-        .json({ message: "Target structural metadata not indexed." });
+      return res.status(404).json({ message: "Item profile missing." });
 
     const updatedFields = {
       name: req.body.name,
       description: req.body.description,
       price: parseFloat(req.body.price),
-      status: req.body.status,
       enabled: req.body.enabled === "true",
     };
 
-    // Replace/update image logic file allocations
     if (req.file) {
       const legacyImage = items[idx].image;
-      if (legacyImage && !legacyImage.endsWith("default.jpg")) {
-        await fs.remove(path.join(__dirname, legacyImage)).catch(() => {});
+      if (legacyImage && legacyImage !== "default.jpg") {
+        const filename = legacyImage.includes("/")
+          ? legacyImage.split("/").pop()
+          : legacyImage;
+        await fs.remove(path.join(UPLOAD_DIR, filename)).catch(() => {});
       }
-      updatedFields.image = `/images/${req.file.filename}`;
+      updatedFields.image = req.file.filename;
     }
 
     items[idx] = { ...items[idx], ...updatedFields };
     await writeData(ITEMS_FILE, items);
     res.json(items[idx]);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Mutation processes interface tracking fault." });
+    res.status(500).json({ message: "Mutation context execution error." });
   }
 });
 
-// ADMIN: REMOVE OPERATION
+// ADMIN: REMOVE PRODUCT
 app.delete("/api/admin/items/:id", async (req, res) => {
   const id = req.params.id;
   try {
     let items = await readData(ITEMS_FILE);
     const targetItem = items.find((i) => i.id === id);
 
-    if (
-      targetItem &&
-      targetItem.image &&
-      !targetItem.image.endsWith("default.jpg")
-    ) {
-      await fs.remove(path.join(__dirname, targetItem.image)).catch(() => {});
+    if (targetItem && targetItem.image && targetItem.image !== "default.jpg") {
+      const filename = targetItem.image.includes("/")
+        ? targetItem.image.split("/").pop()
+        : targetItem.image;
+      await fs.remove(path.join(UPLOAD_DIR, filename)).catch(() => {});
     }
 
     items = items.filter((i) => i.id !== id);
     await writeData(ITEMS_FILE, items);
-    res.json({
-      message: "Item Removed Successfully.",
-    });
+    res.json({ message: "Item Removed Successfully." });
   } catch (err) {
-    res.status(500).json({ message: "Drop context array integrity fault." });
+    res.status(500).json({ message: "Drop tracking mapping indices fault." });
   }
 });
 
-// Catch-all route to serve the SPA setup cleanly
-app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
+// Forward standard root routing to check status
+app.get("/", (req, res) =>
+  res.send(
+    "Sello Dynamic Host Engine Operational. Use API endpoints to exchange resources.",
+  ),
+);
 
 app.listen(PORT, () => {
   console.log(
-    `🚀 Sello Unified Server actively deployed and executing at context path http://localhost:${PORT}`,
+    `🚀 Sello Unified Engine actively online at path address: http://localhost:${PORT}`,
   );
 });
