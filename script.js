@@ -1,22 +1,10 @@
-// Dynamic architecture cross-origin detection
+// Base API configuration. Change this to your hosted backend URI if deploying static assets to GitHub Pages.
 const API_BASE_URL =
   window.location.origin === "https://gautam958.github.io"
     ? "https://sello-bkh7dwd8avecbyd9.eastasia-01.azurewebsites.net/api"
-    : "http://localhost:3000/api";
+    : "/api";
 
-// Global utility helper to generalize resource retrieval paths dynamically
-function resolveImageURL(imageField) {
-  if (!imageField) return "https://placehold.co/600x400?text=No+Image";
-  if (imageField.startsWith("http://") || imageField.startsWith("https://")) {
-    return imageField;
-  }
-  const backendHost = API_BASE_URL.replace("/api", "");
-  const filename = imageField.includes("/")
-    ? imageField.split("/").pop()
-    : imageField;
-  return `${backendHost}/images/${filename}`;
-}
-
+// Application state configuration initialization
 function initApp(page) {
   setupNavbar();
 
@@ -37,6 +25,7 @@ function getSessionUser() {
   return userJson ? JSON.parse(userJson) : null;
 }
 
+// Helper function to get max bid from bids array
 function getMaxBidFromArray(bidsArray) {
   if (!bidsArray || bidsArray.length === 0) return 0;
   return Math.max(...bidsArray.map((bid) => bid.bidAmount || 0));
@@ -94,7 +83,7 @@ async function loadMarketplaceItems() {
         return `
           <div class="card">
               <span class="status-badge status-available">Active Offers</span>
-              <img src="${resolveImageURL(item.image)}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'">
+              <img src="${item.image && item.image.startsWith("http") ? item.image : "/images/" + (item.image ? item.image.split("/").pop() : "default.jpg")}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'">
               <div class="card-content">
                   <h3 class="card-title">${item.name}</h3>
                   <p class="card-desc">${item.description}</p>
@@ -114,84 +103,95 @@ async function loadMarketplaceItems() {
       })
       .join("");
 
-    document.querySelectorAll(".open-bid-modal-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        const user = getSessionUser();
-        if (!user) {
-          alert(
-            "Unauthorized access layer block. Please log into an active account structure.",
-          );
-          window.location.href = "login.html";
-          return;
-        }
-
-        currentTargetBidId = e.target.getAttribute("data-id");
-        const baselinePrice = parseFloat(e.target.getAttribute("data-price"));
-        const highestBidValue = parseFloat(
-          e.target.getAttribute("data-highest"),
-        );
-        const dynamicDefaultValue =
-          highestBidValue > 0 ? highestBidValue + 1.0 : baselinePrice;
-
-        document.getElementById("modal-item-name").innerText =
-          e.target.getAttribute("data-name");
-        document.getElementById("modal-item-price").innerText =
-          `$${baselinePrice.toFixed(2)}`;
-        document.getElementById("modal-highest-bid").innerText =
-          highestBidValue > 0 ? `$${highestBidValue.toFixed(2)}` : "None";
-        document.getElementById("bid-amount").value =
-          dynamicDefaultValue.toFixed(2);
-
-        document.getElementById("bid-modal").style.display = "flex";
-      });
-    });
+    // Safely bind handlers globally across newly written runtime DOM arrays
+    setupModalTriggers();
   } catch (err) {
     grid.innerHTML =
       '<p style="color: var(--danger-color);">Network framework connection exception encountered.</p>';
   }
 }
 
-document
-  .querySelectorAll("#modal-cancel-btn, #modal-cancel-btn-button")
-  .forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.getElementById("bid-modal").style.display = "none";
+function setupModalTriggers() {
+  document.querySelectorAll(".open-bid-modal-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const user = getSessionUser();
+      if (!user) {
+        alert(
+          "Unauthorized access layer block. Please log into an active account structure.",
+        );
+        window.location.href = "login.html";
+        return;
+      }
+
+      // Read target parameters safely off target or parental target contexts
+      const buttonTarget = e.currentTarget;
+      currentTargetBidId = buttonTarget.getAttribute("data-id");
+      const baselinePrice = parseFloat(buttonTarget.getAttribute("data-price"));
+      const highestBidValue = parseFloat(
+        buttonTarget.getAttribute("data-highest"),
+      );
+      const dynamicDefaultValue =
+        highestBidValue > 0 ? highestBidValue + 1.0 : baselinePrice;
+
+      document.getElementById("modal-item-name").innerText =
+        buttonTarget.getAttribute("data-name");
+      document.getElementById("modal-item-price").innerText =
+        `$${baselinePrice.toFixed(2)}`;
+      document.getElementById("modal-highest-bid").innerText =
+        highestBidValue > 0 ? `$${highestBidValue.toFixed(2)}` : "None";
+      document.getElementById("bid-amount").value =
+        dynamicDefaultValue.toFixed(2);
+
+      // Deploy active glassmorphism visibility state layout parameters
+      document.getElementById("bid-modal").style.display = "flex";
     });
   });
+}
 
-document
-  .getElementById("modal-submit-btn")
-  ?.addEventListener("click", async () => {
-    const user = getSessionUser();
-    const amount = parseFloat(document.getElementById("bid-amount").value);
-
-    if (isNaN(amount) || amount <= 0) {
-      alert("Please assign a valid positive currency metric layout.");
-      return;
-    }
-
-    try {
-      const res = await fetch(
-        `${API_BASE_URL}/items/book/${currentTargetBidId}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user: user.username, bidAmount: amount }),
-        },
-      );
-
-      const data = await res.json();
-      if (res.ok) {
-        alert("Bid written successfully. Notification processing triggered!");
+// Global Static Declarations for Modal Escape Controls
+document.addEventListener("DOMContentLoaded", () => {
+  document
+    .querySelectorAll("#modal-cancel-btn, #modal-cancel-btn-button")
+    .forEach((btn) => {
+      btn.addEventListener("click", () => {
         document.getElementById("bid-modal").style.display = "none";
-        loadMarketplaceItems();
-      } else {
-        alert(data.message || "Bidding submission tracking collision event.");
+      });
+    });
+
+  document
+    .getElementById("modal-submit-btn")
+    ?.addEventListener("click", async () => {
+      const user = getSessionUser();
+      const amount = parseFloat(document.getElementById("bid-amount").value);
+
+      if (isNaN(amount) || amount <= 0) {
+        alert("Please assign a valid positive currency metric layout.");
+        return;
       }
-    } catch (err) {
-      alert("Could not interface with data handling nodes.");
-    }
-  });
+
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/items/book/${currentTargetBidId}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user: user.username, bidAmount: amount }),
+          },
+        );
+
+        const data = await res.json();
+        if (res.ok) {
+          alert("Bid written successfully. Notification processing triggered!");
+          document.getElementById("bid-modal").style.display = "none";
+          loadMarketplaceItems();
+        } else {
+          alert(data.message || "Bidding submission tracking collision event.");
+        }
+      } catch (err) {
+        alert("Could not interface with data handling nodes.");
+      }
+    });
+});
 
 // ---------------- USER LOGINS HANDLERS ----------------
 function setupLoginHandler() {
@@ -284,8 +284,9 @@ function checkAdminAccess() {
 async function loadAdminDashboard() {
   const tableBody = document.getElementById("admin-items-table");
   const form = document.getElementById("product-form");
-  const cancelBtn = document.getElementById("form-cancel-btn");
   if (!tableBody) return;
+
+  const cancelBtn = document.getElementById("form-cancel-btn");
 
   const fetchAdminItems = async () => {
     try {
@@ -307,7 +308,7 @@ async function loadAdminDashboard() {
 
           return `
             <tr>
-                <td><img src="${resolveImageURL(item.image)}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'"></td>
+                <td><img src="${item.image && item.image.startsWith("http") ? item.image : "/images/" + (item.image ? item.image.split("/").pop() : "default.jpg")}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'"></td>
                 <td><strong>${item.name}</strong></td>
                 <td style="max-width:200px; font-size:0.8rem; overflow:hidden; text-overflow:ellipsis;">${item.description}</td>
                 <td>$${parseFloat(item.price).toFixed(2)}</td>
@@ -365,7 +366,7 @@ async function loadAdminDashboard() {
         alert("Product record set updated matching definitions.");
         form.reset();
         document.getElementById("item-id").value = "";
-        cancelBtn.style.display = "none";
+        if (cancelBtn) cancelBtn.style.display = "none";
         document.getElementById("form-submit-btn").innerText = "Save Product";
         fetchAdminItems();
       } else {
@@ -376,12 +377,14 @@ async function loadAdminDashboard() {
     }
   });
 
-  cancelBtn.addEventListener("click", () => {
-    form.reset();
-    document.getElementById("item-id").value = "";
-    cancelBtn.style.display = "none";
-    document.getElementById("form-submit-btn").innerText = "Save Product";
-  });
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", () => {
+      form.reset();
+      document.getElementById("item-id").value = "";
+      cancelBtn.style.display = "none";
+      document.getElementById("form-submit-btn").innerText = "Save Product";
+    });
+  }
 
   fetchAdminItems();
 }
@@ -398,7 +401,8 @@ function populateEditForm(items, id) {
 
   document.getElementById("form-submit-btn").innerText =
     "Update Product Configuration";
-  document.getElementById("form-cancel-btn").style.display = "inline-block";
+  const cancelBtn = document.getElementById("form-cancel-btn");
+  if (cancelBtn) cancelBtn.style.display = "inline-block";
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
