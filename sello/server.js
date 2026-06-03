@@ -9,7 +9,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware setups
-app.use(cors());
+// Allow requests from your GitHub Pages site
+app.use(
+  cors({
+    origin: "https://gautam958.github.io",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  }),
+);
+
 app.use(express.json());
 app.use(express.static(__dirname));
 app.use("/images", express.static(path.join(__dirname, "..", "Images")));
