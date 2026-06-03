@@ -4,7 +4,7 @@
   "description": "sello express api",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node sello/server.js"
   },
   "repository": {
     "type": "git",
