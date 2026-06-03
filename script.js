@@ -79,21 +79,24 @@ async function loadMarketplaceItems() {
         const processingBaselinePrice =
           topBidValue > 0 ? topBidValue : item.price;
 
-        // FIXED: Safely resolves both absolute paths ('/images/...') and hosted URL strings
+        // FIXED: Handles absolute paths, fully-qualified URLs, and folder capitalization issues safely
         let imgSrc = "https://placehold.co/600x400?text=No+Image";
         if (item.image) {
           if (item.image.startsWith("http")) {
             imgSrc = item.image;
+          } else if (
+            item.image.startsWith("/images/") ||
+            item.image.startsWith("/Images/")
+          ) {
+            imgSrc = item.image;
           } else {
-            // Ensure proper capitalization fallback mapping to backend resource routes
-            const filename = item.image.split("/").pop();
-            imgSrc = `/Images/${filename}`;
+            imgSrc = `/Images/${item.image}`;
           }
         }
 
         return `
           <div class="card">
-              <img src="${imgSrc}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'">
+              <img src="${imgSrc}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'; this.onerror=null;">
               <div class="card-content">
                   <h3 class="card-title">${item.name}</h3>
                   <p class="card-desc">${item.description}</p>
@@ -304,20 +307,24 @@ async function loadAdminDashboard() {
                   .join("")
               : "No bids yet";
 
-          // FIXED: Matches marketplace view logic using uppercase directory reference mapping
+          // FIXED: Standardized admin dashboard static paths to support lowercase/uppercase mappings
           let adminImgSrc = "https://placehold.co/50?text=No+Img";
           if (item.image) {
             if (item.image.startsWith("http")) {
               adminImgSrc = item.image;
+            } else if (
+              item.image.startsWith("/images/") ||
+              item.image.startsWith("/Images/")
+            ) {
+              adminImgSrc = item.image;
             } else {
-              const filename = item.image.split("/").pop();
-              adminImgSrc = `/Images/${filename}`;
+              adminImgSrc = `/Images/${item.image}`;
             }
           }
 
           return `
             <tr>
-                <td><img src="${adminImgSrc}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'"></td>
+                <td><img src="${adminImgSrc}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'; this.onerror=null;"></td>
                 <td>${item.name}</td>
                 <td>${item.description}</td>
                 <td>$${parseFloat(item.price).toFixed(2)}</td>
@@ -381,8 +388,8 @@ async function loadAdminDashboard() {
       } else {
         alert("Failed to save product.");
       }
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
     }
   });
 
