@@ -1,0 +1,55 @@
+# Build and deploy Node.js app to Azure Web App - sello
+name: Build and deploy Node.js app to Azure Web App - sello
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24" # or 20 LTS
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Archive production files
+        run: Compress-Archive -Path . -DestinationPath release.zip
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-app
+          path: release.zip
+
+  deploy:
+    runs-on: windows-latest
+    needs: build
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_ECF99911E7F7477FBB68200DDC6FB35E }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_1481B0E7AC1F4064B7CBAF7F6F65D980 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_31EE0BAF88E247AAB11FB0CC6DF2B024 }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: "sello"
+          slot-name: "Production"
+          package: release.zip

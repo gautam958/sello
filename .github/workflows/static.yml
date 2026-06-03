@@ -32,7 +32,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload only the folder containing index.html
-          path: "sello/"
+          path: "sello"
 
       - name: Deploy to GitHub Pages
         id: deployment
