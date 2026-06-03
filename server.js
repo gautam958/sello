@@ -20,11 +20,11 @@ app.use(
 
 app.use(express.json());
 app.use(express.static(__dirname));
-app.use("/images", express.static(path.join(__dirname, "..", "Images")));
+app.use("/images", express.static(path.join(__dirname, "Images")));
 // Path Definitions
 const USERS_FILE = path.join(__dirname, "users.json");
 const ITEMS_FILE = path.join(__dirname, "items.json");
-const UPLOAD_DIR = path.join(__dirname, "..", "Images");
+const UPLOAD_DIR = path.join(__dirname, "Images");
 
 // Ensure image upload architecture structure space exists
 fs.ensureDirSync(UPLOAD_DIR);
