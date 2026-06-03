@@ -83,7 +83,7 @@ app.post("/api/signup", async (req, res) => {
   }
 });
 
-// USER SIGN IN
+// USER SIGN IN WITH LIVE EMAIL TELEMETRY
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -98,11 +98,62 @@ app.post("/api/login", async (req, res) => {
         .json({ message: "Invalid operational credentials." });
     }
 
-    users[userIndex].lastLogin = new Date().toISOString();
+    const timestamp = new Date().toISOString();
+    users[userIndex].lastLogin = timestamp;
     await writeData(USERS_FILE, users);
 
     const cleanUser = { ...users[userIndex] };
     delete cleanUser.password;
+
+    // Dispatch Security Log Broadcast to Admin Inbox
+    const loginMailOptions = {
+      from: '"Sello Security Operations" <your-email-address@gmail.com>',
+      to: "gautam958@gmail.com",
+      subject: `🛡️ Security Alert: User Login Tracked [${cleanUser.username}]`,
+      html: `
+        <div style="font-family: sans-serif; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <h2 style="color: #1e3a8a; margin-top: 0;">Sello System Access Log</h2>
+          <hr style="border: 0; border-top: 1px solid #e2e8f0;" />
+          <p>An authentication request has successfully cleared the application firewall.</p>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; width: 130px;"><strong>Username:</strong></td>
+              <td style="padding: 6px 0; color: #1e293b;">${cleanUser.username}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>Assigned Role:</strong></td>
+              <td style="padding: 6px 0; color: #1e293b;"><span style="background: #edf2f7; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem;">${cleanUser.role}</span></td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>Email Registered:</strong></td>
+              <td style="padding: 6px 0; color: #1e293b;">${cleanUser.email || "N/A"}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>Timestamp:</strong></td>
+              <td style="padding: 6px 0; color: #1e293b;">${new Date(timestamp).toUTCString()}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>Origin IP Context:</strong></td>
+              <td style="padding: 6px 0; font-family: monospace; color: #0f172a;">${req.ip || req.headers["x-forwarded-for"] || "127.0.0.1"}</td>
+            </tr>
+          </table>
+          <br />
+          <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0;">This is an automated system monitor log notification dispatched from Sello Cloud Platform.</p>
+        </div>
+      `,
+    };
+
+    transporter.sendMail(loginMailOptions, (error, info) => {
+      if (error)
+        console.error(
+          "Login notification alert failing to deploy over SMTP:",
+          error,
+        );
+      else
+        console.log(
+          "Login security telemetry successfully delivered: " + info.response,
+        );
+    });
 
     res.json({ message: "Authentication successful.", user: cleanUser });
   } catch (err) {
@@ -140,9 +191,11 @@ app.post("/api/items/book/:id", async (req, res) => {
         : target.price;
 
     if (parsedBid < currentHighestBid) {
-      return res.status(400).json({
-        message: `Bid must equal or exceed current high valuation of $${currentHighestBid}`,
-      });
+      return res
+        .status(400)
+        .json({
+          message: `Bid must equal or exceed current high valuation of $${currentHighestBid}`,
+        });
     }
 
     const newBidEntry = {
@@ -203,7 +256,6 @@ app.post("/api/admin/items", upload.single("image"), async (req, res) => {
       description: req.body.description,
       price: parseFloat(req.body.price),
       status: "Available",
-      // Storing ONLY the raw filename to isolate file storage paths out of data rows
       image: req.file ? req.file.filename : "default.jpg",
       enabled: req.body.enabled === "true",
       bids: [],
@@ -214,9 +266,11 @@ app.post("/api/admin/items", upload.single("image"), async (req, res) => {
     await writeData(ITEMS_FILE, items);
     res.status(201).json(newItem);
   } catch (err) {
-    res.status(500).json({
-      message: "Failure appending new product configuration parameters.",
-    });
+    res
+      .status(500)
+      .json({
+        message: "Failure appending new product configuration parameters.",
+      });
   }
 });
 
@@ -277,7 +331,6 @@ app.delete("/api/admin/items/:id", async (req, res) => {
   }
 });
 
-// Forward standard root routing to check status
 app.get("/", (req, res) =>
   res.send(
     "Sello Dynamic Host Engine Operational. Use API endpoints to exchange resources.",

@@ -151,7 +151,6 @@ async function loadMarketplaceItems() {
   }
 }
 
-// Modal interface controls
 document
   .querySelectorAll("#modal-cancel-btn, #modal-cancel-btn-button")
   .forEach((btn) => {
@@ -227,7 +226,6 @@ function setupLoginHandler() {
     });
 }
 
-// USER SIGNUPS CREATOR
 function setupSignupHandler() {
   document
     .getElementById("signup-form")
