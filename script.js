@@ -40,9 +40,9 @@ function setupNavbar() {
 
   if (user) {
     if (user.role === "admin") {
-      html += `<a href="admin.html">Item Management Dashboard</a>`;
+      html += `<a href="admin.html">Admin Items</a>`;
     }
-    html += `<span style="margin-left: 1rem; font-weight: 600; color: var(--primary-color);">👋 ${user.username} (${user.role})</span>`;
+    html += `<span style="margin-left: 1rem;">Welcome, ${user.username} (${user.role})</span>`;
     html += `<button id="logout-btn" class="btn" style="background-color: var(--danger-color); margin-left: 1rem;">Logout</button>`;
   } else {
     html += `<a href="login.html">Login</a>`;
@@ -69,8 +69,7 @@ async function loadMarketplaceItems() {
     const visibleItems = items.filter((item) => item.enabled);
 
     if (visibleItems.length === 0) {
-      grid.innerHTML =
-        "<p>No active inventory listings have been published matching visibility scopes.</p>";
+      grid.innerHTML = "<p>No items available at the moment.</p>";
       return;
     }
 
@@ -80,29 +79,27 @@ async function loadMarketplaceItems() {
         const processingBaselinePrice =
           topBidValue > 0 ? topBidValue : item.price;
 
-        // FIXED: Capitalized folder path mapping targeting local assets cleanly
-        const imgSrc =
-          item.image && item.image.startsWith("http")
-            ? item.image
-            : item.image
-              ? item.image.toLowerCase().startsWith("/images")
-                ? item.image
-                : "/Images/" + item.image.split("/").pop()
-              : "/Images/default.jpg";
+        // FIXED: Safely resolves both absolute paths ('/images/...') and hosted URL strings
+        let imgSrc = "https://placehold.co/600x400?text=No+Image";
+        if (item.image) {
+          if (item.image.startsWith("http")) {
+            imgSrc = item.image;
+          } else {
+            // Ensure proper capitalization fallback mapping to backend resource routes
+            const filename = item.image.split("/").pop();
+            imgSrc = `/Images/${filename}`;
+          }
+        }
 
         return `
           <div class="card">
-              <span class="status-badge status-available">Active Offers</span>
               <img src="${imgSrc}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'">
               <div class="card-content">
                   <h3 class="card-title">${item.name}</h3>
                   <p class="card-desc">${item.description}</p>
-                  <p style="font-size:0.85rem; color:#64748b; margin-bottom:0.5rem;">Total Bids Count: <strong>${item.bids ? item.bids.length : 0}</strong></p>
+                  <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Bids: ${item.bids ? item.bids.length : 0}</p>
                   <div class="card-footer">
-                      <div>
-                          <span style="font-size:0.75rem; display:block; color:#64748b;">Current Allocation Value</span>
-                          <span class="price">$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
-                      </div>
+                      <span class="price">$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
                       <button class="btn open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">
                           Book / Place Bid
                       </button>
@@ -113,11 +110,11 @@ async function loadMarketplaceItems() {
       })
       .join("");
 
-    // Safely bind handlers globally across newly written runtime DOM arrays
+    // Safe event listener binding loop
     setupModalTriggers();
   } catch (err) {
     grid.innerHTML =
-      '<p style="color: var(--danger-color);">Network framework connection exception encountered.</p>';
+      '<p style="color: var(--danger-color);">Failed to load items.</p>';
   }
 }
 
@@ -126,14 +123,11 @@ function setupModalTriggers() {
     btn.addEventListener("click", (e) => {
       const user = getSessionUser();
       if (!user) {
-        alert(
-          "Unauthorized access layer block. Please log into an active account structure.",
-        );
+        alert("Please login to place a bid.");
         window.location.href = "login.html";
         return;
       }
 
-      // Read target parameters safely off target or parental target contexts
       const buttonTarget = e.currentTarget;
       currentTargetBidId = buttonTarget.getAttribute("data-id");
       const baselinePrice = parseFloat(buttonTarget.getAttribute("data-price"));
@@ -152,7 +146,6 @@ function setupModalTriggers() {
       document.getElementById("bid-amount").value =
         dynamicDefaultValue.toFixed(2);
 
-      // Deploy active glassmorphism visibility state layout parameters
       document.getElementById("bid-modal").style.display = "flex";
     });
   });
@@ -175,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const amount = parseFloat(document.getElementById("bid-amount").value);
 
       if (isNaN(amount) || amount <= 0) {
-        alert("Please assign a valid positive currency metric layout.");
+        alert("Please enter a valid bid amount.");
         return;
       }
 
@@ -191,14 +184,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const data = await res.json();
         if (res.ok) {
-          alert("Bid written successfully. Notification processing triggered!");
+          alert("Bid placed successfully!");
           document.getElementById("bid-modal").style.display = "none";
           loadMarketplaceItems();
         } else {
-          alert(data.message || "Bidding submission tracking collision event.");
+          alert(data.message || "Failed to place bid.");
         }
       } catch (err) {
-        alert("Could not interface with data handling nodes.");
+        alert("Error connecting to server.");
       }
     });
 });
@@ -230,7 +223,7 @@ function setupLoginHandler() {
           errText.style.display = "block";
         }
       } catch (err) {
-        errText.innerText = "Connection initialization validation error.";
+        errText.innerText = "An error occurred during login.";
         errText.style.display = "block";
       }
     });
@@ -250,7 +243,7 @@ function setupSignupHandler() {
       const errText = document.getElementById("signup-error");
 
       if (password !== confirmPass) {
-        errText.innerText = "Error matching verification key sequence fields.";
+        errText.innerText = "Passwords do not match.";
         errText.style.display = "block";
         return;
       }
@@ -264,17 +257,14 @@ function setupSignupHandler() {
 
         const data = await res.json();
         if (res.ok) {
-          alert(
-            "Registration configuration successfully written. Redirecting to login portal context.",
-          );
+          alert("Registration successful! Please login.");
           window.location.href = "login.html";
         } else {
           errText.innerText = data.message;
           errText.style.display = "block";
         }
       } catch (err) {
-        errText.innerText =
-          "Operational server failure during account creations lifecycle.";
+        errText.innerText = "An error occurred during signup.";
         errText.style.display = "block";
       }
     });
@@ -284,9 +274,7 @@ function setupSignupHandler() {
 function checkAdminAccess() {
   const user = getSessionUser();
   if (!user || user.role !== "admin") {
-    alert(
-      "Access restriction layer violation. Root credentials signature missing.",
-    );
+    alert("Access denied.");
     window.location.href = "index.html";
   }
 }
@@ -311,33 +299,34 @@ async function loadAdminDashboard() {
               ? item.bids
                   .map(
                     (b) =>
-                      `<div style="border-bottom:1px dashed #cbd5e1; padding:2px; font-size:0.75rem;">👤 <strong>${b.userId}</strong>: <span style="color:var(--success-color);font-weight:bold;">$${b.bidAmount}</span></div>`,
+                      `<div style="border-bottom: 1px dashed #ccc; padding: 2px;">${b.userId}: $${b.bidAmount}</div>`,
                   )
                   .join("")
-              : '<span style="color:#94a3b8; font-style:italic;">No historical bid nodes</span>';
+              : "No bids yet";
 
-          // FIXED: Standardized case folder targets for the admin view
-          const adminImgSrc =
-            item.image && item.image.startsWith("http")
-              ? item.image
-              : item.image
-                ? item.image.toLowerCase().startsWith("/images")
-                  ? item.image
-                  : "/Images/" + item.image.split("/").pop()
-                : "/Images/default.jpg";
+          // FIXED: Matches marketplace view logic using uppercase directory reference mapping
+          let adminImgSrc = "https://placehold.co/50?text=No+Img";
+          if (item.image) {
+            if (item.image.startsWith("http")) {
+              adminImgSrc = item.image;
+            } else {
+              const filename = item.image.split("/").pop();
+              adminImgSrc = `/Images/${filename}`;
+            }
+          }
 
           return `
             <tr>
                 <td><img src="${adminImgSrc}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'"></td>
-                <td><strong>${item.name}</strong></td>
-                <td style="max-width:200px; font-size:0.8rem; overflow:hidden; text-overflow:ellipsis;">${item.description}</td>
+                <td>${item.name}</td>
+                <td>${item.description}</td>
                 <td>$${parseFloat(item.price).toFixed(2)}</td>
-                <td style="font-weight:700; color:var(--primary-color)">$${parseFloat(topBidValue).toFixed(2)}</td>
-                <td>${item.enabled ? "🟢 Visible" : "🔴 Suspended"}</td>
-                <td><div style="max-height:80px; overflow-y:auto; background:#f8fafc; padding:4px; border-radius:4px;">${historyRows}</div></td>
+                <td>$${parseFloat(topBidValue).toFixed(2)}</td>
+                <td>${item.enabled ? "Enabled" : "Disabled"}</td>
+                <td>${historyRows}</td>
                 <td class="actions-cell">
-                    <button class="btn admin-edit-btn" data-id="${item.id}" style="background-color:#eab308; padding:0.25rem 0.5rem; font-size:0.8rem;">Edit</button>
-                    <button class="btn admin-del-btn" data-id="${item.id}" style="background-color:var(--danger-color); padding:0.25rem 0.5rem; font-size:0.8rem;">Delete</button>
+                    <button class="btn admin-edit-btn" data-id="${item.id}" style="background-color: #eab308; padding: 0.25rem 0.5rem; font-size: 0.8rem;">Edit</button>
+                    <button class="btn admin-del-btn" data-id="${item.id}" style="background-color: var(--danger-color); padding: 0.25rem 0.5rem; font-size: 0.8rem;">Delete</button>
                 </td>
             </tr>
           `;
@@ -359,7 +348,7 @@ async function loadAdminDashboard() {
           ),
         );
     } catch (err) {
-      console.error("Dashboard list mapping context error.");
+      console.error("Failed to fetch admin items.");
     }
   };
 
@@ -383,14 +372,14 @@ async function loadAdminDashboard() {
     try {
       const response = await fetch(url, { method, body: formData });
       if (response.ok) {
-        alert("Product record set updated matching definitions.");
+        alert("Product saved successfully.");
         form.reset();
         document.getElementById("item-id").value = "";
         if (cancelBtn) cancelBtn.style.display = "none";
         document.getElementById("form-submit-btn").innerText = "Save Product";
         fetchAdminItems();
       } else {
-        alert("Database transaction operation layout tracking fault.");
+        alert("Failed to save product.");
       }
     } catch (err) {
       console.error(err);
@@ -419,26 +408,20 @@ function populateEditForm(items, id) {
   document.getElementById("item-desc").value = item.description;
   document.getElementById("item-enabled").checked = item.enabled;
 
-  document.getElementById("form-submit-btn").innerText =
-    "Update Product Configuration";
+  document.getElementById("form-submit-btn").innerText = "Update Product";
   const cancelBtn = document.getElementById("form-cancel-btn");
   if (cancelBtn) cancelBtn.style.display = "inline-block";
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function deleteItem(id, callback) {
-  if (
-    !confirm(
-      "Are you certain you wish to completely drop this product configuration parameter node?",
-    )
-  )
-    return;
+  if (!confirm("Are you sure you want to delete this item?")) return;
   try {
     const res = await fetch(`${API_BASE_URL}/admin/items/${id}`, {
       method: "DELETE",
     });
     if (res.ok) {
-      alert("Item entry completely expunged from context tracking records.");
+      alert("Item deleted successfully.");
       callback();
     }
   } catch (err) {
