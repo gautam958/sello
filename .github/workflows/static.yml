@@ -1,5 +1,5 @@
 # Simple workflow for deploying static content to GitHub Pages
-name: Deploy static content to Pages
+name: Deploy static content to GITHUB Pages
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           # Upload only the folder containing index.html
-          path: "sello"
+          path: "/"
 
       - name: Deploy to GitHub Pages
         id: deployment
