@@ -57,4 +57,3 @@ jobs:
           app-name: "sello"
           slot-name: "Production"
           package: release.zip
-          startup-command: "node server.js"
