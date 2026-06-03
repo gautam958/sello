@@ -2,7 +2,12 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]   # deploy when you push to main
+    branches: [ main ]
+
+permissions:
+  contents: write    # allow pushing to gh-pages
+  pages: write       # allow publishing to Pages
+  id-token: write    # required for authentication
 
 jobs:
   build-deploy:
@@ -27,4 +32,4 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .   # root folder with index.html
+          publish_dir: .
