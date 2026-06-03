@@ -17,6 +17,11 @@
         "userId": "rupa",
         "bidAmount": 90,
         "timestamp": "2026-06-03T14:04:42.099Z"
+      },
+      {
+        "userId": "rupa",
+        "bidAmount": 80,
+        "timestamp": "2026-06-03T16:28:51.405Z"
       }
     ],
     "highestBid": 100
