@@ -80,10 +80,20 @@ async function loadMarketplaceItems() {
         const processingBaselinePrice =
           topBidValue > 0 ? topBidValue : item.price;
 
+        // FIXED: Capitalized folder path mapping targeting local assets cleanly
+        const imgSrc =
+          item.image && item.image.startsWith("http")
+            ? item.image
+            : item.image
+              ? item.image.toLowerCase().startsWith("/images")
+                ? item.image
+                : "/Images/" + item.image.split("/").pop()
+              : "/Images/default.jpg";
+
         return `
           <div class="card">
               <span class="status-badge status-available">Active Offers</span>
-              <img src="${item.image && item.image.startsWith("http") ? item.image : "/images/" + (item.image ? item.image.split("/").pop() : "default.jpg")}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'">
+              <img src="${imgSrc}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'">
               <div class="card-content">
                   <h3 class="card-title">${item.name}</h3>
                   <p class="card-desc">${item.description}</p>
@@ -306,9 +316,19 @@ async function loadAdminDashboard() {
                   .join("")
               : '<span style="color:#94a3b8; font-style:italic;">No historical bid nodes</span>';
 
+          // FIXED: Standardized case folder targets for the admin view
+          const adminImgSrc =
+            item.image && item.image.startsWith("http")
+              ? item.image
+              : item.image
+                ? item.image.toLowerCase().startsWith("/images")
+                  ? item.image
+                  : "/Images/" + item.image.split("/").pop()
+                : "/Images/default.jpg";
+
           return `
             <tr>
-                <td><img src="${item.image && item.image.startsWith("http") ? item.image : "/images/" + (item.image ? item.image.split("/").pop() : "default.jpg")}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'"></td>
+                <td><img src="${adminImgSrc}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'"></td>
                 <td><strong>${item.name}</strong></td>
                 <td style="max-width:200px; font-size:0.8rem; overflow:hidden; text-overflow:ellipsis;">${item.description}</td>
                 <td>$${parseFloat(item.price).toFixed(2)}</td>
