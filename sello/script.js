@@ -1,7 +1,7 @@
 // Base API configuration. Change this to your hosted backend URI if deploying static assets to GitHub Pages.
 const API_BASE_URL =
   window.location.origin === "https://gautam958.github.io"
-    ? "https://your-deployed-backend-api.com/api"
+    ? "https://sello-bkh7dwd8avecbyd9.eastasia-01.azurewebsites.net/api"
     : "/api";
 
 // Application state configuration initialization

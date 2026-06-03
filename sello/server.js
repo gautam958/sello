@@ -77,6 +77,10 @@ const requireAuth = (req, res, next) => {
 
 // ---------------- REST APIS ENDPOINTS ----------------
 
+app.get("/", (req, res) => {
+  res.send("API is running");
+});
+
 // USER REGISTRATION ROOT
 app.post("/api/register", async (req, res) => {
   const { username, password, email } = req.body;
