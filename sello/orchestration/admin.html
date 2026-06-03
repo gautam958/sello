@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sello - Admin Items</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <a href="index.html" class="logo">Sello Dashboard</a>
+      <nav id="nav-menu"></nav>
+    </header>
+
+    <main class="container">
+      <h2>Add / Update Product Item</h2>
+      <div class="form-container" style="max-width: 100%; margin: 1.5rem 0">
+        <form id="product-form" enctype="multipart/form-data">
+          <input type="hidden" id="item-id" />
+          <div
+            class="grid"
+            style="
+              grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+              gap: 1rem;
+            "
+          >
+            <div class="form-group">
+              <label for="item-name">Item Name</label>
+              <input type="text" id="item-name" required />
+            </div>
+            <div class="form-group">
+              <label for="item-price">Price ($)</label>
+              <input type="number" id="item-price" step="0.01" required />
+            </div>
+            <div class="form-group">
+              <label for="item-image">Product Image</label>
+              <input type="file" id="item-image" accept="image/*" />
+            </div>
+            <div class="form-group">
+              <label for="item-status">Status</label>
+              <select id="item-status">
+                <option value="Available">Available</option>
+                <option value="Booked">Booked</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="item-desc">Description</label>
+            <textarea id="item-desc" rows="3"></textarea>
+          </div>
+          <div
+            class="form-group"
+            style="display: flex; align-items: center; gap: 0.5rem"
+          >
+            <input
+              type="checkbox"
+              id="item-enabled"
+              checked
+              style="width: auto"
+            />
+            <label for="item-enabled" style="margin-bottom: 0"
+              >Enable product visibility listing</label
+            >
+          </div>
+          <button type="submit" class="btn" id="form-submit-btn">
+            Save Product
+          </button>
+          <button
+            type="button"
+            class="btn"
+            id="form-cancel-btn"
+            style="background-color: #64748b; display: none"
+          >
+            Cancel Edit
+          </button>
+        </form>
+      </div>
+
+      <h2 style="margin-top: 3rem">Inventory Management</h2>
+      <div style="overflow-x: auto">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Image</th>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Price</th>
+              <th>Highest Bid</th>
+              <th>Visibility</th>
+              <th>Bid History</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-items-table"></tbody>
+        </table>
+      </div>
+    </main>
+
+    <script src="script.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        initApp("admin");
+      });
+    </script>
+  </body>
+</html>
