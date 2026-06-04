@@ -548,12 +548,12 @@ h2 {
   z-index: 10;
 }
 .status-available {
-  background: rgba(1, 71, 48, 0.72);
+  background: rgba(1, 71, 48, 0.893);
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-right: none;
 }
 .status-booked {
-  background: rgba(161, 2, 2, 0.72);
+  background: rgba(161, 2, 2, 0.925);
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-right: none;
 }
