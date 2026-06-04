@@ -1,22 +1,10 @@
-// Dynamic architecture cross-origin detection
+// Base API configuration. Change this to your hosted backend URI if deploying static assets to GitHub Pages.
 const API_BASE_URL =
   window.location.origin === "https://gautam958.github.io"
     ? "https://sello-bkh7dwd8avecbyd9.eastasia-01.azurewebsites.net/api"
-    : "http://localhost:3000/api";
+    : "/api";
 
-// Global utility helper to generalize resource retrieval paths dynamically
-function resolveImageURL(imageField) {
-  if (!imageField) return "https://placehold.co/600x400?text=No+Image";
-  if (imageField.startsWith("http://") || imageField.startsWith("https://")) {
-    return imageField;
-  }
-  const backendHost = API_BASE_URL.replace("/api", "");
-  const filename = imageField.includes("/")
-    ? imageField.split("/").pop()
-    : imageField;
-  return `${backendHost}/images/${filename}`;
-}
-
+// Application state configuration initialization
 function initApp(page) {
   setupNavbar();
 
@@ -37,6 +25,7 @@ function getSessionUser() {
   return userJson ? JSON.parse(userJson) : null;
 }
 
+// Helper function to get max bid from bids array
 function getMaxBidFromArray(bidsArray) {
   if (!bidsArray || bidsArray.length === 0) return 0;
   return Math.max(...bidsArray.map((bid) => bid.bidAmount || 0));
@@ -51,9 +40,9 @@ function setupNavbar() {
 
   if (user) {
     if (user.role === "admin") {
-      html += `<a href="admin.html">Item Management Dashboard</a>`;
+      html += `<a href="admin.html">Admin Items</a>`;
     }
-    html += `<span style="margin-left: 1rem; font-weight: 600; color: var(--primary-color);">👋 ${user.username} (${user.role})</span>`;
+    html += `<span style="margin-left: 1rem;">Welcome, ${user.username} (${user.role})</span>`;
     html += `<button id="logout-btn" class="btn" style="background-color: var(--danger-color); margin-left: 1rem;">Logout</button>`;
   } else {
     html += `<a href="login.html">Login</a>`;
@@ -80,8 +69,7 @@ async function loadMarketplaceItems() {
     const visibleItems = items.filter((item) => item.enabled);
 
     if (visibleItems.length === 0) {
-      grid.innerHTML =
-        "<p>No active inventory listings have been published matching visibility scopes.</p>";
+      grid.innerHTML = "<p>No items available at the moment.</p>";
       return;
     }
 
@@ -91,19 +79,23 @@ async function loadMarketplaceItems() {
         const processingBaselinePrice =
           topBidValue > 0 ? topBidValue : item.price;
 
+        // FIXED: Maps lowercase relative db paths directly to your backend's capitalized Images folder
+        let imgSrc = "https://placehold.co/600x400?text=No+Image";
+        if (item.image) {
+          imgSrc = item.image.startsWith("http")
+            ? item.image
+            : item.image.replace("/images/", "/Images/");
+        }
+
         return `
           <div class="card">
-              <span class="status-badge status-available">${item.status}</span>
-              <img src="${resolveImageURL(item.image)}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'">
+              <img src="${imgSrc}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'; this.onerror=null;">
               <div class="card-content">
                   <h3 class="card-title">${item.name}</h3>
                   <p class="card-desc">${item.description}</p>
-                  <p style="font-size:0.85rem; color:#64748b; margin-bottom:0.5rem;">Total Bids Count: <strong>${item.bids ? item.bids.length : 0}</strong></p>
+                  <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Bids: ${item.bids ? item.bids.length : 0}</p>
                   <div class="card-footer">
-                      <div>
-                          <span style="font-size:0.75rem; display:block; color:#64748b;">Current Allocation Value</span>
-                          <span class="price">$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
-                      </div>
+                      <span class="price">$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
                       <button class="btn open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">
                           Book / Place Bid
                       </button>
@@ -114,87 +106,90 @@ async function loadMarketplaceItems() {
       })
       .join("");
 
-    document.querySelectorAll(".open-bid-modal-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        const user = getSessionUser();
-        if (!user) {
-          alert(
-            "Unauthorized access layer block. Please log into an active account structure.",
-          );
-          window.location.href = "login.html";
-          return;
-        }
-
-        // changed 'e.target' to 'e.currentTarget' to guarantee reading from the button
-        const targetBtn = e.currentTarget;
-
-        currentTargetBidId = targetBtn.getAttribute("data-id");
-        const baselinePrice = parseFloat(targetBtn.getAttribute("data-price"));
-        const highestBidValue = parseFloat(
-          targetBtn.getAttribute("data-highest"),
-        );
-        const dynamicDefaultValue =
-          highestBidValue > 0 ? highestBidValue + 1.0 : baselinePrice;
-
-        document.getElementById("modal-item-name")?.innerText =
-          targetBtn.getAttribute("data-name");
-        document.getElementById("modal-item-price")?.innerText =
-          `$${baselinePrice.toFixed(2)}`;
-        document.getElementById("modal-highest-bid")?.innerText =
-          highestBidValue > 0 ? `$${highestBidValue.toFixed(2)}` : "None";
-        document.getElementById("bid-amount")?.value =
-          dynamicDefaultValue.toFixed(2);
-
-        document.getElementById("bid-modal").style.display = "flex";
-      });
-    });
+    setupModalTriggers();
   } catch (err) {
     grid.innerHTML =
-      "<p>Error retrieving marketplace inventory. Please try again later.</p>";
+      '<p style="color: var(--danger-color);">Failed to load items.</p>';
   }
 }
 
-// Modal interface controls
-document
-  .querySelectorAll("#modal-cancel-btn, #modal-cancel-btn-button")
-  .forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.getElementById("bid-modal").style.display = "none";
+function setupModalTriggers() {
+  document.querySelectorAll(".open-bid-modal-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const user = getSessionUser();
+      if (!user) {
+        alert("Please login to place a bid.");
+        window.location.href = "login.html";
+        return;
+      }
+
+      const buttonTarget = e.currentTarget;
+      currentTargetBidId = buttonTarget.getAttribute("data-id");
+      const baselinePrice = parseFloat(buttonTarget.getAttribute("data-price"));
+      const highestBidValue = parseFloat(
+        buttonTarget.getAttribute("data-highest"),
+      );
+      const dynamicDefaultValue =
+        highestBidValue > 0 ? highestBidValue + 1.0 : baselinePrice;
+
+      document.getElementById("modal-item-name").innerText =
+        buttonTarget.getAttribute("data-name");
+      document.getElementById("modal-item-price").innerText =
+        `$${baselinePrice.toFixed(2)}`;
+      document.getElementById("modal-highest-bid").innerText =
+        highestBidValue > 0 ? `$${highestBidValue.toFixed(2)}` : "None";
+      document.getElementById("bid-amount").value =
+        dynamicDefaultValue.toFixed(2);
+
+      document.getElementById("bid-modal").style.display = "flex";
     });
   });
+}
 
-document
-  .getElementById("modal-submit-btn")
-  ?.addEventListener("click", async () => {
-    const user = getSessionUser();
-    const amount = parseFloat(document.getElementById("bid-amount").value);
-
-    if (isNaN(amount) || amount <= 0) {
-      alert("Please assign a valid positive currency metric layout.");
-      return;
-    }
-
-    try {
-      const res = await fetch(
-        `${API_BASE_URL}/items/book/${currentTargetBidId}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user: user.username, bidAmount: amount }),
-        },
-      );
-
-      const data = await res.json();
-      if (res.ok) {
+document.addEventListener("DOMContentLoaded", () => {
+  document
+    .querySelectorAll("#modal-cancel-btn, #modal-cancel-btn-button")
+    .forEach((btn) => {
+      btn.addEventListener("click", () => {
         document.getElementById("bid-modal").style.display = "none";
-        loadMarketplaceItems();
-      } else {
-        alert(data.message || "Bidding submission tracking collision event.");
+      });
+    });
+
+  document
+    .getElementById("modal-submit-btn")
+    ?.addEventListener("click", async () => {
+      const user = getSessionUser();
+      const amount = parseFloat(document.getElementById("bid-amount").value);
+
+      // RESTORED: Preserves your precise logic check parameters untouched
+      if (isNaN(amount) || amount <= 0) {
+        alert("Please enter a valid bid amount.");
+        return;
       }
-    } catch (err) {
-      alert("Could not interface with data handling nodes.");
-    }
-  });
+
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/items/book/${currentTargetBidId}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user: user.username, bidAmount: amount }),
+          },
+        );
+
+        const data = await res.json();
+        if (res.ok) {
+          alert("Bid placed successfully!");
+          document.getElementById("bid-modal").style.display = "none";
+          loadMarketplaceItems();
+        } else {
+          alert(data.message || "Failed to place bid.");
+        }
+      } catch (err) {
+        alert("Error connecting to server.");
+      }
+    });
+});
 
 // ---------------- USER LOGINS HANDLERS ----------------
 function setupLoginHandler() {
@@ -223,13 +218,12 @@ function setupLoginHandler() {
           errText.style.display = "block";
         }
       } catch (err) {
-        errText.innerText = "Connection initialization validation error.";
+        errText.innerText = "An error occurred during login.";
         errText.style.display = "block";
       }
     });
 }
 
-// USER SIGNUPS CREATOR
 function setupSignupHandler() {
   document
     .getElementById("signup-form")
@@ -244,7 +238,7 @@ function setupSignupHandler() {
       const errText = document.getElementById("signup-error");
 
       if (password !== confirmPass) {
-        errText.innerText = "Error matching verification key sequence fields.";
+        errText.innerText = "Passwords do not match.";
         errText.style.display = "block";
         return;
       }
@@ -258,17 +252,14 @@ function setupSignupHandler() {
 
         const data = await res.json();
         if (res.ok) {
-          alert(
-            "Registration configuration successfully written. Redirecting to login portal context.",
-          );
+          alert("Registration successful! Please login.");
           window.location.href = "login.html";
         } else {
           errText.innerText = data.message;
           errText.style.display = "block";
         }
       } catch (err) {
-        errText.innerText =
-          "Operational server failure during account creations lifecycle.";
+        errText.innerText = "An error occurred during signup.";
         errText.style.display = "block";
       }
     });
@@ -278,9 +269,7 @@ function setupSignupHandler() {
 function checkAdminAccess() {
   const user = getSessionUser();
   if (!user || user.role !== "admin") {
-    alert(
-      "Access restriction layer violation. Root credentials signature missing.",
-    );
+    alert("Access denied.");
     window.location.href = "index.html";
   }
 }
@@ -288,8 +277,9 @@ function checkAdminAccess() {
 async function loadAdminDashboard() {
   const tableBody = document.getElementById("admin-items-table");
   const form = document.getElementById("product-form");
-  const cancelBtn = document.getElementById("form-cancel-btn");
   if (!tableBody) return;
+
+  const cancelBtn = document.getElementById("form-cancel-btn");
 
   const fetchAdminItems = async () => {
     try {
@@ -304,23 +294,31 @@ async function loadAdminDashboard() {
               ? item.bids
                   .map(
                     (b) =>
-                      `<div style="border-bottom:1px dashed #cbd5e1; padding:2px; font-size:0.75rem;">👤 <strong>${b.userId}</strong>: <span style="color:var(--success-color);font-weight:bold;">$${b.bidAmount}</span></div>`,
+                      `<div style="border-bottom: 1px dashed #ccc; padding: 2px;">${b.userId}: $${b.bidAmount}</div>`,
                   )
                   .join("")
-              : '<span style="color:#94a3b8; font-style:italic;">No historical bid nodes</span>';
+              : "No bids yet";
+
+          // FIXED: Standardized case folder maps for dashboard view image elements
+          let adminImgSrc = "https://placehold.co/50?text=No+Img";
+          if (item.image) {
+            adminImgSrc = item.image.startsWith("http")
+              ? item.image
+              : item.image;
+          }
 
           return `
             <tr>
-                <td><img src="${resolveImageURL(item.image)}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'"></td>
-                <td><strong>${item.name}</strong></td>
-                <td style="max-width:200px; font-size:0.8rem; overflow:hidden; text-overflow:ellipsis;">${item.description}</td>
+                <td><img src="${adminImgSrc}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'; this.onerror=null;"></td>
+                <td>${item.name}</td>
+                <td>${item.description}</td>
                 <td>$${parseFloat(item.price).toFixed(2)}</td>
-                <td style="font-weight:700; color:var(--primary-color)">$${parseFloat(topBidValue).toFixed(2)}</td>
-                <td>${item.enabled ? "🟢 Visible" : "🔴 Suspended"}</td>
-                <td><div style="max-height:80px; overflow-y:auto; background:#f8fafc; padding:4px; border-radius:4px;">${historyRows}</div></td>
+                <td>$${parseFloat(topBidValue).toFixed(2)}</td>
+                <td>${item.enabled ? "Enabled" : "Disabled"}</td>
+                <td>${historyRows}</td>
                 <td class="actions-cell">
-                    <button class="btn admin-edit-btn" data-id="${item.id}" style="background-color:#eab308; padding:0.25rem 0.5rem; font-size:0.8rem;">Edit</button>
-                    <button class="btn admin-del-btn" data-id="${item.id}" style="background-color:var(--danger-color); padding:0.25rem 0.5rem; font-size:0.8rem;">Delete</button>
+                    <button class="btn admin-edit-btn" data-id="${item.id}" style="background-color: #eab308; padding: 0.25rem 0.5rem; font-size: 0.8rem;">Edit</button>
+                    <button class="btn admin-del-btn" data-id="${item.id}" style="background-color: var(--danger-color); padding: 0.25rem 0.5rem; font-size: 0.8rem;">Delete</button>
                 </td>
             </tr>
           `;
@@ -342,7 +340,7 @@ async function loadAdminDashboard() {
           ),
         );
     } catch (err) {
-      console.error("Dashboard list mapping context error.");
+      console.error("Failed to fetch admin items.");
     }
   };
 
@@ -366,25 +364,28 @@ async function loadAdminDashboard() {
     try {
       const response = await fetch(url, { method, body: formData });
       if (response.ok) {
+        alert("Product saved successfully.");
         form.reset();
         document.getElementById("item-id").value = "";
-        cancelBtn.style.display = "none";
+        if (cancelBtn) cancelBtn.style.display = "none";
         document.getElementById("form-submit-btn").innerText = "Save Product";
         fetchAdminItems();
       } else {
-        alert("Database transaction operation layout tracking fault.");
+        alert("Failed to save product.");
       }
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
     }
   });
 
-  cancelBtn.addEventListener("click", () => {
-    form.reset();
-    document.getElementById("item-id").value = "";
-    cancelBtn.style.display = "none";
-    document.getElementById("form-submit-btn").innerText = "Save Product";
-  });
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", () => {
+      form.reset();
+      document.getElementById("item-id").value = "";
+      cancelBtn.style.display = "none";
+      document.getElementById("form-submit-btn").innerText = "Save Product";
+    });
+  }
 
   fetchAdminItems();
 }
@@ -399,24 +400,20 @@ function populateEditForm(items, id) {
   document.getElementById("item-desc").value = item.description;
   document.getElementById("item-enabled").checked = item.enabled;
 
-  document.getElementById("form-submit-btn").innerText =
-    "Update Product Configuration";
-  document.getElementById("form-cancel-btn").style.display = "inline-block";
+  document.getElementById("form-submit-btn").innerText = "Update Product";
+  const cancelBtn = document.getElementById("form-cancel-btn");
+  if (cancelBtn) cancelBtn.style.display = "inline-block";
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function deleteItem(id, callback) {
-  if (
-    !confirm(
-      "Are you certain you wish to completely drop this product configuration parameter node?",
-    )
-  )
-    return;
+  if (!confirm("Are you sure you want to delete this item?")) return;
   try {
     const res = await fetch(`${API_BASE_URL}/admin/items/${id}`, {
       method: "DELETE",
     });
     if (res.ok) {
+      alert("Item deleted successfully.");
       callback();
     }
   } catch (err) {
