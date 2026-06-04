@@ -4,6 +4,21 @@ const API_BASE_URL =
     ? "https://sello-bkh7dwd8avecbyd9.eastasia-01.azurewebsites.net/api"
     : "/api";
 
+// Host that serves uploaded images. Images live at `/images`, a sibling of `/api`,
+// on the same server, so derive it by stripping the trailing `/api` from the API base.
+const ASSET_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+
+// Resolve a stored image value to a usable src. Handles full URLs, values already
+// prefixed with `/images/` or `/Images/`, and bare filenames from new uploads.
+function resolveImageSrc(image, fallback) {
+  if (!image) return fallback;
+  if (image.startsWith("http")) return image;
+  const filename = image
+    .replace(/^\/?(images|Images)\//, "")
+    .replace(/^\/+/, "");
+  return `${ASSET_BASE_URL}/images/${filename}`;
+}
+
 // Application state configuration initialization
 function initApp(page) {
   setupNavbar();
@@ -79,13 +94,10 @@ async function loadMarketplaceItems() {
         const processingBaselinePrice =
           topBidValue > 0 ? topBidValue : item.price;
 
-        // FIXED: Maps lowercase relative db paths directly to your backend's capitalized Images folder
-        let imgSrc = "https://placehold.co/600x400?text=No+Image";
-        if (item.image) {
-          imgSrc = item.image.startsWith("http")
-            ? item.image
-            : item.image.replace("/images/", "/Images/");
-        }
+        const imgSrc = resolveImageSrc(
+          item.image,
+          "https://placehold.co/600x400?text=No+Image",
+        );
 
         return `
           <div class="card">
@@ -299,13 +311,10 @@ async function loadAdminDashboard() {
                   .join("")
               : "No bids yet";
 
-          // FIXED: Standardized case folder maps for dashboard view image elements
-          let adminImgSrc = "https://placehold.co/50?text=No+Img";
-          if (item.image) {
-            adminImgSrc = item.image.startsWith("http")
-              ? item.image
-              : item.image;
-          }
+          const adminImgSrc = resolveImageSrc(
+            item.image,
+            "https://placehold.co/50?text=No+Img",
+          );
 
           return `
             <tr>

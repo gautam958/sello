@@ -30,6 +30,18 @@ fs.ensureDirSync(UPLOAD_DIR);
 // Explicitly serve static assets out of the upload folder across the /images route web space
 app.use("/images", express.static(UPLOAD_DIR));
 
+// Serve the static frontend (HTML/CSS/JS) from the project root so the app and API share
+// one origin in local development. Block data and server files from being downloaded.
+app.use((req, res, next) => {
+  if (
+    /(server\.js|users\.json|items\.json|package(-lock)?\.json)$/.test(req.path)
+  ) {
+    return res.status(404).end();
+  }
+  next();
+});
+app.use(express.static(__dirname));
+
 // Storage Engine Config for Multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
