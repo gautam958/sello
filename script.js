@@ -52,6 +52,9 @@ function initApp(page) {
   } else if (page === "users") {
     checkAdminAccess();
     loadAdminUsers();
+  } else if (page === "logs") {
+    checkAdminAccess();
+    loadAdminLogs();
   }
 }
 
@@ -85,6 +88,7 @@ function setupNavbar() {
     if (user.role === "admin") {
       html += link("admin.html", "Admin Items");
       html += link("users.html", "Manage Users");
+      html += link("logs.html", "Logs");
     }
     html += `<span class="nav-user">Welcome, ${user.username} (${user.role})</span>`;
     html += `<button id="logout-btn" class="btn nav-logout">Logout</button>`;
@@ -752,5 +756,101 @@ async function deleteUser(username) {
     }
   } catch (err) {
     alert("Error deleting user.");
+  }
+}
+
+// ─── ADMIN ACTIVITY LOGS ─────────────────────────────────────────
+// Map each log type to a badge colour so admins can scan the feed quickly.
+const LOG_TYPE_COLORS = {
+  signup: "#2563eb",
+  login: "#16a34a",
+  login_failed: "#f59e0b",
+  bid: "#7c3aed",
+  booking: "#0891b2",
+  user: "#0d9488",
+  item: "#64748b",
+  error: "#ef4444",
+  log: "#94a3b8",
+};
+
+async function loadAdminLogs() {
+  const tableBody = document.getElementById("admin-logs-table");
+  if (!tableBody) return;
+
+  const filterEl = document.getElementById("log-type-filter");
+  const countEl = document.getElementById("log-count");
+  const type = filterEl ? filterEl.value : "";
+
+  const render = async () => {
+    const selectedType = filterEl ? filterEl.value : type;
+    const qs = selectedType ? `?type=${encodeURIComponent(selectedType)}` : "";
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/logs${qs}`, {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) {
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#ef4444;">Unable to load logs (${res.status}).</td></tr>`;
+        return;
+      }
+      const logs = await res.json();
+      if (countEl) countEl.textContent = `${logs.length} entries`;
+
+      if (!logs.length) {
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94a3b8;">No activity logged yet.</td></tr>`;
+        return;
+      }
+
+      tableBody.innerHTML = logs
+        .map((l) => {
+          const color = LOG_TYPE_COLORS[l.type] || "#64748b";
+          return `
+            <tr>
+              <td style="white-space:nowrap;font-size:0.8rem;color:#475569;">${new Date(l.timestamp).toLocaleString()}</td>
+              <td><span style="display:inline-block;background:${color};color:#fff;border-radius:2rem;font-size:0.7rem;font-weight:600;padding:2px 10px;text-transform:uppercase;">${escapeHtml(l.type)}</span></td>
+              <td>${l.user ? escapeHtml(l.user) : "—"}</td>
+              <td>${escapeHtml(l.message)}</td>
+              <td style="font-size:0.8rem;color:#64748b;">${l.details ? escapeHtml(l.details) : "—"}</td>
+            </tr>
+          `;
+        })
+        .join("");
+    } catch (err) {
+      tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#ef4444;">Error loading logs.</td></tr>`;
+    }
+  };
+
+  await render();
+
+  if (filterEl && !filterEl.dataset.bound) {
+    filterEl.dataset.bound = "1";
+    filterEl.addEventListener("change", render);
+  }
+
+  const refreshBtn = document.getElementById("log-refresh-btn");
+  if (refreshBtn && !refreshBtn.dataset.bound) {
+    refreshBtn.dataset.bound = "1";
+    refreshBtn.addEventListener("click", render);
+  }
+
+  const clearBtn = document.getElementById("log-clear-btn");
+  if (clearBtn && !clearBtn.dataset.bound) {
+    clearBtn.dataset.bound = "1";
+    clearBtn.addEventListener("click", async () => {
+      if (!confirm("Clear all activity logs? This cannot be undone.")) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/logs`, {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        });
+        if (res.ok) {
+          alert("Logs cleared.");
+          render();
+        } else {
+          alert("Failed to clear logs.");
+        }
+      } catch (err) {
+        alert("Error clearing logs.");
+      }
+    });
   }
 }

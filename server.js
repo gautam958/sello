@@ -23,6 +23,7 @@ app.use(express.json());
 // Path Definitions - Lowercase folder matching production standard environments
 const USERS_FILE = path.join(__dirname, "users.json");
 const ITEMS_FILE = path.join(__dirname, "items.json");
+const LOGS_FILE = path.join(__dirname, "logs.json");
 const UPLOAD_DIR = path.join(__dirname, "images");
 
 // Ensure image upload directory layout space exists natively
@@ -35,7 +36,9 @@ app.use("/images", express.static(UPLOAD_DIR));
 // one origin in local development. Block data and server files from being downloaded.
 app.use((req, res, next) => {
   if (
-    /(server\.js|users\.json|items\.json|package(-lock)?\.json)$/.test(req.path)
+    /(server\.js|users\.json|items\.json|logs\.json|package(-lock)?\.json)$/.test(
+      req.path,
+    )
   ) {
     return res.status(404).end();
   }
@@ -58,7 +61,7 @@ const upload = multer({ storage: storage });
 // Email configuration. Set EMAIL_USER / EMAIL_PASS (a Gmail App Password) in the environment
 // to enable real delivery; otherwise emails are attempted with placeholders and simply logged.
 const EMAIL_USER = process.env.EMAIL_USER || "gautam958@gmail.com";
-const EMAIL_PASS = process.env.EMAIL_PASS || "sqvo muzr huds onqi";
+const EMAIL_PASS = process.env.EMAIL_PASS || "sqvo muzr huds onqi";
 const OWNER_EMAIL = process.env.OWNER_EMAIL || "gautam958@gmail.com";
 
 // Email Transporter Layer Initialization
@@ -210,6 +213,35 @@ const readData = async (file) => JSON.parse(await fs.readFile(file, "utf8"));
 const writeData = async (file, data) =>
   await fs.writeFile(file, JSON.stringify(data, null, 2), "utf8");
 
+// ─── Activity logging (append-only JSON, capped) ────────────────
+// Records user actions and server errors so admins can audit behaviour and
+// spot potential bugs from the Logs screen. Never throws — logging must not
+// break the request it is recording.
+const LOG_LIMIT = 1000;
+const logActivity = async (type, message, meta = {}) => {
+  try {
+    let logs = [];
+    try {
+      logs = await readData(LOGS_FILE);
+      if (!Array.isArray(logs)) logs = [];
+    } catch {
+      logs = [];
+    }
+    logs.push({
+      id: Date.now().toString() + Math.round(Math.random() * 1000),
+      timestamp: new Date().toISOString(),
+      type, // signup | login | login_failed | bid | booking | user | item | error
+      user: meta.user || "",
+      message,
+      details: meta.details || "",
+    });
+    if (logs.length > LOG_LIMIT) logs = logs.slice(logs.length - LOG_LIMIT);
+    await writeData(LOGS_FILE, logs);
+  } catch (e) {
+    console.error("Activity log write failed:", e.message);
+  }
+};
+
 // Look up a user's email address by username (returns undefined if not found).
 const findUserEmail = (users, username) =>
   users.find((u) => u.username === username)?.email;
@@ -238,6 +270,11 @@ app.post("/api/signup", async (req, res) => {
     users.push(newUser);
     await writeData(USERS_FILE, users);
 
+    await logActivity("signup", `New user registered: ${username}`, {
+      user: username,
+      details: `email: ${email || "—"}, mobile: ${mobile || "—"}`,
+    });
+
     // Notify the owner that a new user has registered.
     sendMail({
       to: OWNER_EMAIL,
@@ -254,6 +291,10 @@ app.post("/api/signup", async (req, res) => {
 
     res.status(201).json({ message: "Account created successfully." });
   } catch (err) {
+    await logActivity("error", `Signup failed: ${err.message}`, {
+      user: req.body.username || "",
+      details: "POST /api/signup",
+    });
     res
       .status(500)
       .json({ message: "Error mapping signup persistence arrays." });
@@ -271,6 +312,14 @@ app.post("/api/login", async (req, res) => {
       userIndex === -1 ||
       !verifyPassword(password, users[userIndex].password)
     ) {
+      await logActivity(
+        "login_failed",
+        `Failed login attempt for "${username}"`,
+        {
+          user: username || "",
+          details: userIndex === -1 ? "unknown username" : "wrong password",
+        },
+      );
       return res
         .status(401)
         .json({ message: "Invalid operational credentials." });
@@ -287,6 +336,11 @@ app.post("/api/login", async (req, res) => {
     const cleanUser = { ...users[userIndex] };
     delete cleanUser.password;
     delete cleanUser.passwordEnc;
+
+    await logActivity("login", `${cleanUser.username} logged in`, {
+      user: cleanUser.username,
+      details: `role: ${cleanUser.role}`,
+    });
 
     // Notify the owner that a user has logged in.
     sendMail({
@@ -306,6 +360,10 @@ app.post("/api/login", async (req, res) => {
     });
     res.json({ message: "Authentication successful.", user: cleanUser, token });
   } catch (err) {
+    await logActivity("error", `Login failed: ${err.message}`, {
+      user: req.body.username || "",
+      details: "POST /api/login",
+    });
     res.status(500).json({ message: "Internal runtime server context error." });
   }
 });
@@ -368,6 +426,11 @@ app.post("/api/items/book/:id", async (req, res) => {
 
     await writeData(ITEMS_FILE, items);
 
+    await logActivity("bid", `${user} placed a bid on "${target.name}"`, {
+      user,
+      details: `amount: HK$${parsedBid.toFixed(2)}`,
+    });
+
     // Notify the owner of the new bid (high priority).
     sendMail({
       to: OWNER_EMAIL,
@@ -410,6 +473,10 @@ app.post("/api/items/book/:id", async (req, res) => {
 
     res.json({ message: "Bid accepted and written safely.", item: target });
   } catch (err) {
+    await logActivity("error", `Bid failed: ${err.message}`, {
+      user: req.body.user || "",
+      details: `POST /api/items/book/${req.params.id}`,
+    });
     res
       .status(500)
       .json({ message: "Error mapping bid collection structural entries." });
@@ -473,6 +540,39 @@ app.get("/api/admin/users", requireAdmin, async (req, res) => {
   }
 });
 
+// ADMIN: READ ACTIVITY LOGS (newest first, optional ?type= and ?limit= filters)
+app.get("/api/admin/logs", requireAdmin, async (req, res) => {
+  try {
+    let logs = [];
+    try {
+      logs = await readData(LOGS_FILE);
+      if (!Array.isArray(logs)) logs = [];
+    } catch {
+      logs = [];
+    }
+    logs = logs.slice().reverse(); // newest first
+    if (req.query.type) logs = logs.filter((l) => l.type === req.query.type);
+    const limit = parseInt(req.query.limit, 10);
+    if (!isNaN(limit) && limit > 0) logs = logs.slice(0, limit);
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ message: "Unable to read activity logs." });
+  }
+});
+
+// ADMIN: CLEAR ACTIVITY LOGS
+app.delete("/api/admin/logs", requireAdmin, async (req, res) => {
+  try {
+    await writeData(LOGS_FILE, []);
+    await logActivity("log", "Activity logs cleared by admin", {
+      user: req.auth.username,
+    });
+    res.json({ message: "Logs cleared." });
+  } catch (err) {
+    res.status(500).json({ message: "Unable to clear activity logs." });
+  }
+});
+
 // ADMIN: CREATE USER
 app.post("/api/admin/users", requireAdmin, async (req, res) => {
   const { username, email, mobile, role, password } = req.body;
@@ -496,9 +596,17 @@ app.post("/api/admin/users", requireAdmin, async (req, res) => {
     setUserPassword(newUser, password);
     users.push(newUser);
     await writeData(USERS_FILE, users);
+    await logActivity("user", `Admin created user "${username}"`, {
+      user: req.auth.username,
+      details: `role: ${newUser.role}`,
+    });
     const { password: _, passwordEnc: __, ...safe } = newUser;
     res.status(201).json(safe);
   } catch (err) {
+    await logActivity("error", `Create user failed: ${err.message}`, {
+      user: req.auth.username,
+      details: "POST /api/admin/users",
+    });
     res.status(500).json({ message: "Error creating user." });
   }
 });
@@ -518,9 +626,18 @@ app.put("/api/admin/users/:username", requireAdmin, async (req, res) => {
     if (password && password.trim()) setUserPassword(users[idx], password);
 
     await writeData(USERS_FILE, users);
+    await logActivity("user", `Admin updated user "${targetUsername}"`, {
+      user: req.auth.username,
+      details:
+        password && password.trim() ? "password changed" : "profile updated",
+    });
     const { password: _, passwordEnc: __, ...safe } = users[idx];
     res.json(safe);
   } catch (err) {
+    await logActivity("error", `Update user failed: ${err.message}`, {
+      user: req.auth.username,
+      details: `PUT /api/admin/users/${targetUsername}`,
+    });
     res.status(500).json({ message: "Error updating user." });
   }
 });
@@ -537,8 +654,15 @@ app.delete("/api/admin/users/:username", requireAdmin, async (req, res) => {
     if (!existed) return res.status(404).json({ message: "User not found." });
     users = users.filter((u) => u.username !== targetUsername);
     await writeData(USERS_FILE, users);
+    await logActivity("user", `Admin deleted user "${targetUsername}"`, {
+      user: req.auth.username,
+    });
     res.json({ message: "User deleted." });
   } catch (err) {
+    await logActivity("error", `Delete user failed: ${err.message}`, {
+      user: req.auth.username,
+      details: `DELETE /api/admin/users/${targetUsername}`,
+    });
     res.status(500).json({ message: "Error deleting user." });
   }
 });
@@ -569,9 +693,27 @@ app.post(
 
       items.push(newItem);
       await writeData(ITEMS_FILE, items);
-      if (status === "Booked") await notifyBooking(newItem, bookedUser);
+      await logActivity("item", `Admin created item "${newItem.name}"`, {
+        user: req.auth.username,
+        details: `status: ${status}, price: HK$${newItem.price}`,
+      });
+      if (status === "Booked") {
+        await notifyBooking(newItem, bookedUser);
+        await logActivity(
+          "booking",
+          `"${newItem.name}" booked for ${bookedUser}`,
+          {
+            user: req.auth.username,
+            details: `booked user: ${bookedUser}`,
+          },
+        );
+      }
       res.status(201).json(newItem);
     } catch (err) {
+      await logActivity("error", `Create item failed: ${err.message}`, {
+        user: req.auth.username,
+        details: "POST /api/admin/items",
+      });
       res.status(500).json({
         message: "Failure appending new product configuration parameters.",
       });
@@ -622,9 +764,27 @@ app.put(
 
       items[idx] = { ...items[idx], ...updatedFields };
       await writeData(ITEMS_FILE, items);
-      if (becameBooked) await notifyBooking(items[idx], bookedUser);
+      await logActivity("item", `Admin updated item "${items[idx].name}"`, {
+        user: req.auth.username,
+        details: `status: ${status}`,
+      });
+      if (becameBooked) {
+        await notifyBooking(items[idx], bookedUser);
+        await logActivity(
+          "booking",
+          `"${items[idx].name}" booked for ${bookedUser}`,
+          {
+            user: req.auth.username,
+            details: `booked user: ${bookedUser}`,
+          },
+        );
+      }
       res.json(items[idx]);
     } catch (error) {
+      await logActivity("error", `Update item failed: ${error.message}`, {
+        user: req.auth.username,
+        details: `PUT /api/admin/items/${id}`,
+      });
       res.status(500).json({ message: "Mutation context execution error." });
     }
   },
@@ -644,10 +804,18 @@ app.delete("/api/admin/items/:id", requireAdmin, async (req, res) => {
       await fs.remove(path.join(UPLOAD_DIR, filename)).catch(() => {});
     }
 
+    const removedName = targetItem ? targetItem.name : id;
     items = items.filter((i) => i.id !== id);
     await writeData(ITEMS_FILE, items);
+    await logActivity("item", `Admin deleted item "${removedName}"`, {
+      user: req.auth.username,
+    });
     res.json({ message: "Item Removed Successfully." });
   } catch (err) {
+    await logActivity("error", `Delete item failed: ${err.message}`, {
+      user: req.auth.username,
+      details: `DELETE /api/admin/items/${id}`,
+    });
     res.status(500).json({ message: "Drop tracking mapping indices fault." });
   }
 });

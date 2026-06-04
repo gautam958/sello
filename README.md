@@ -57,6 +57,11 @@ Pages) talking to a Node API (Azure Web App).
   admin only) to create, edit (email/mobile/role/password), and delete users, including a
   password column with a show/hide toggle. The booked-user dropdown identifies users as
   `username | email | mobile`.
+- **Activity logging** — a dedicated **Logs** page (`logs.html`, top-menu link, admin only)
+  shows an append-only audit trail so the admin can review user behaviour and spot potential
+  bugs. The server records `signup`, `login`, `login_failed`, `bid`, `booking`, user changes,
+  item changes, and server `error` events to `logs.json` (capped at the newest 1000 entries).
+  The page is colour-coded by type and supports filtering by type, refreshing, and clearing.
 - **Email notifications** (via Nodemailer / Gmail):
   - **Signup** → notifies the owner (`OWNER_EMAIL`) with the new user's username, email, mobile, and role.
   - **Login** → notifies the owner (`OWNER_EMAIL`).
@@ -119,9 +124,11 @@ sello/
 ├── signup.html        # Registration page
 ├── admin.html         # Admin dashboard (product CRUD + status/booking)
 ├── users.html         # Admin User Management page (CRUD + viewable passwords)
+├── logs.html          # Admin Activity Logs page (audit trail viewer)
 ├── favicon.svg        # App icon (sell / price-tag), linked from every page
 ├── items.json         # Seed/persisted product data
 ├── users.json         # Seed/persisted user accounts
+├── logs.json          # Append-only activity log (auto-created, capped at 1000)
 ├── Images/            # Uploaded / seed product images
 ├── package.json       # Dependencies and `npm start` script
 └── .github/workflows/ # Azure (API) + GitHub Pages (frontend) deployments
@@ -266,6 +273,8 @@ Base path: `/api`
 | `POST`   | `/api/admin/items`           | admin | `multipart/form-data` (fields + `image`, `status`, `bookedUser`) | Create a product; emails on booking.                                                                   |
 | `PUT`    | `/api/admin/items/:id`       | admin | `multipart/form-data` (fields + `image`, `status`, `bookedUser`) | Update a product; emails when newly booked.                                                            |
 | `DELETE` | `/api/admin/items/:id`       | admin | —                                                                | Delete a product + its image.                                                                          |
+| `GET`    | `/api/admin/logs`            | admin | `?type=&limit=` (query, optional)                                | List activity logs newest-first; optional filter by `type` and cap by `limit`.                         |
+| `DELETE` | `/api/admin/logs`            | admin | —                                                                | Clear all activity logs.                                                                               |
 
 Admin routes (`admin` in the table) are verified **server-side**: the request must carry a
 valid `Authorization: Bearer <token>` whose payload has `role === "admin"`. Missing/invalid
@@ -289,9 +298,10 @@ curl -X POST http://localhost:3000/api/items/book/1 \
 | `signup.html` | Register a new account (mobile number + client-side password confirmation).               |
 | `admin.html`  | Product CRUD, image upload, visibility toggle, bid history, and status/booking.           |
 | `users.html`  | **Manage Users** (admin only): create/edit/delete users + viewable passwords (show/hide). |
+| `logs.html`   | **Logs** (admin only): activity audit trail with type filter, refresh, and clear.         |
 
 Each page calls `initApp("<page>")`, which wires up the navbar and the page-specific logic in
-`script.js`. The **Manage Users** link appears in the top menu only for admins.
+`script.js`. The **Manage Users** and **Logs** links appear in the top menu only for admins.
 
 ## Deployment
 
