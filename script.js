@@ -133,16 +133,16 @@ async function loadMarketplaceItems() {
         const dynamicDefaultValue =
           highestBidValue > 0 ? highestBidValue + 1.0 : baselinePrice;
 
-        document.getElementById("modal-item-name").innerText =
+        document.getElementById("modal-item-name")?.innerText =
           e.target.getAttribute("data-name");
-        document.getElementById("modal-item-price").innerText =
+        document.getElementById("modal-item-price")?.innerText =
           `$${baselinePrice.toFixed(2)}`;
-        document.getElementById("modal-highest-bid").innerText =
+        document.getElementById("modal-highest-bid")?.innerText =
           highestBidValue > 0 ? `$${highestBidValue.toFixed(2)}` : "None";
-        document.getElementById("bid-amount").value =
+        document.getElementById("bid-amount")?.value =
           dynamicDefaultValue.toFixed(2);
 
-        document.getElementById("bid-modal").style.display = "flex";
+        document.getElementById("bid-modal")?.style.display = "flex";
       });
     });
   } catch (err) {
@@ -364,7 +364,6 @@ async function loadAdminDashboard() {
     try {
       const response = await fetch(url, { method, body: formData });
       if (response.ok) {
-        alert("Product record set updated matching definitions.");
         form.reset();
         document.getElementById("item-id").value = "";
         cancelBtn.style.display = "none";
@@ -416,7 +415,6 @@ async function deleteItem(id, callback) {
       method: "DELETE",
     });
     if (res.ok) {
-      alert("Item entry completely expunged from context tracking records.");
       callback();
     }
   } catch (err) {
