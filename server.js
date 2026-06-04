@@ -27,9 +27,13 @@ const UPLOAD_DIR = path.join(__dirname, "Images");
 // Ensure image upload directory layout space exists natively
 fs.ensureDirSync(UPLOAD_DIR);
 
+// Explicitly serve static assets out of the upload folder across the /Images route web space
+app.use("/Images", express.static(UPLOAD_DIR));
+const staticAssetsPath = path.resolve(UPLOAD_DIR);
 console.log(
-  `📁 Static asset hosting configured for directory: ${UPLOAD_DIR} at route path: /Images`,
+  `📁 Static asset hosting configured for directory: ${staticAssetsPath} at route path: /Images`,
 );
+
 // Storage Engine Config for Multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -46,8 +50,8 @@ const upload = multer({ storage: storage });
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "your-email-address@gmail.com", // Replace with your standard system Gmail
-    pass: "your-app-password", // Replace with your generated App Password
+    user: "your-email-address@gmail.com",
+    pass: "your-app-password",
   },
 });
 
@@ -245,7 +249,7 @@ app.post("/api/items/book/:id", async (req, res) => {
 });
 
 // ADMIN: CREATE PRODUCT
-app.post("/api/admin/items", upload.single("image"), async (req, res) => {
+app.post("/api/admin/items", upload.single("Image"), async (req, res) => {
   try {
     const items = await readData(ITEMS_FILE);
     const newItem = {
@@ -254,6 +258,7 @@ app.post("/api/admin/items", upload.single("image"), async (req, res) => {
       description: req.body.description,
       price: parseFloat(req.body.price),
       status: "Available",
+      // FIXED: Saves the pristine filename token to ensure lookups always combine perfectly with server roots
       image: req.file ? req.file.filename : "default.jpg",
       enabled: req.body.enabled === "true",
       bids: [],
@@ -271,7 +276,7 @@ app.post("/api/admin/items", upload.single("image"), async (req, res) => {
 });
 
 // ADMIN: UPDATE PRODUCT
-app.put("/api/admin/items/:id", upload.single("image"), async (req, res) => {
+app.put("/api/admin/items/:id", upload.single("Image"), async (req, res) => {
   const id = req.params.id;
   try {
     const items = await readData(ITEMS_FILE);
