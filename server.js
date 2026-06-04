@@ -64,6 +64,22 @@ const EMAIL_USER = process.env.EMAIL_USER || "your-email-address@gmail.com";
 const EMAIL_PASS = process.env.EMAIL_PASS || "your-app-password";
 const OWNER_EMAIL = process.env.OWNER_EMAIL || "gautam958@gmail.com";
 
+// Startup diagnostic: prints whether the email credentials actually reached the process,
+// WITHOUT exposing the password (only its length + a placeholder check). Read this in the
+// Azure Log stream right after a restart to confirm the env vars are wired correctly.
+const usingPlaceholderUser = EMAIL_USER === "your-email-address@gmail.com";
+const usingPlaceholderPass = EMAIL_PASS === "your-app-password";
+console.log(
+  `Email config -> EMAIL_USER: ${EMAIL_USER} | EMAIL_PASS length: ${EMAIL_PASS.length} | ` +
+    `OWNER_EMAIL: ${OWNER_EMAIL} | placeholder user: ${usingPlaceholderUser} | placeholder pass: ${usingPlaceholderPass}`,
+);
+if (usingPlaceholderUser || usingPlaceholderPass) {
+  console.warn(
+    "Email WILL FAIL: EMAIL_USER/EMAIL_PASS are not set in the environment (still using placeholders). " +
+      "Set them in Azure → Web App → Settings → Environment variables, then Restart.",
+  );
+}
+
 // Email Transporter Layer Initialization
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -71,6 +87,15 @@ const transporter = nodemailer.createTransport({
     user: EMAIL_USER,
     pass: EMAIL_PASS,
   },
+});
+
+// Verify SMTP credentials on boot so the Log stream shows immediately whether Gmail accepts them.
+transporter.verify((err) => {
+  if (err) {
+    console.error("SMTP verify FAILED on startup:", err.message.split("\n")[0]);
+  } else {
+    console.log("SMTP verify OK on startup — Gmail accepted the credentials.");
+  }
 });
 
 // Centralized mail sender. Never throws — logs failures so the request still succeeds even
