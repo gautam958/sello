@@ -93,7 +93,7 @@ async function loadMarketplaceItems() {
 
         return `
           <div class="card">
-              <span class="status-badge status-available">Active Offers</span>
+              <span class="status-badge status-available">${item.status}</span>
               <img src="${resolveImageURL(item.image)}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'">
               <div class="card-content">
                   <h3 class="card-title">${item.name}</h3>
@@ -178,8 +178,7 @@ document
       );
 
       const data = await res.json();
-      if (res.ok) {
-        alert("Bid written successfully. Notification processing triggered!");
+      if (res.ok) { 
         document.getElementById("bid-modal").style.display = "none";
         loadMarketplaceItems();
       } else {
