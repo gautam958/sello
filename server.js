@@ -139,9 +139,9 @@ app.post("/api/items/book/:id", async (req, res) => {
         ? Math.max(...target.bids.map((b) => b.bidAmount))
         : target.price;
 
-    if (parsedBid < currentHighestBid) {
+    if (parsedBid < 0) {
       return res.status(400).json({
-        message: `Bid must equal or exceed current high valuation of $${currentHighestBid}`,
+        message: `Bid must be a positive value.`,
       });
     }
 
