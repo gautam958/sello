@@ -114,42 +114,38 @@ async function loadMarketplaceItems() {
       })
       .join("");
 
-    document.querySelectorAll(".open-bid-modal-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        const user = getSessionUser();
-        if (!user) {
-          alert(
-            "Unauthorized access layer block. Please log into an active account structure.",
-          );
-          window.location.href = "login.html";
-          return;
-        }
+document.querySelectorAll(".open-bid-modal-btn").forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    const user = getSessionUser();
+    if (!user) {
+      alert(
+        "Unauthorized access layer block. Please log into an active account structure.",
+      );
+      window.location.href = "login.html";
+      return;
+    }
 
-        currentTargetBidId = e.target.getAttribute("data-id");
-        const baselinePrice = parseFloat(e.target.getAttribute("data-price"));
-        const highestBidValue = parseFloat(
-          e.target.getAttribute("data-highest"),
-        );
-        const dynamicDefaultValue =
-          highestBidValue > 0 ? highestBidValue + 1.0 : baselinePrice;
+    // changed 'e.target' to 'e.currentTarget' to guarantee reading from the button
+    const targetBtn = e.currentTarget;
 
-        document.getElementById("modal-item-name")?.innerText =
-          e.target.getAttribute("data-name");
-        document.getElementById("modal-item-price")?.innerText =
-          `$${baselinePrice.toFixed(2)}`;
-        document.getElementById("modal-highest-bid")?.innerText =
-          highestBidValue > 0 ? `$${highestBidValue.toFixed(2)}` : "None";
-        document.getElementById("bid-amount")?.value =
-          dynamicDefaultValue.toFixed(2);
+    currentTargetBidId = targetBtn.getAttribute("data-id");
+    const baselinePrice = parseFloat(targetBtn.getAttribute("data-price"));
+    const highestBidValue = parseFloat(targetBtn.getAttribute("data-highest"));
+    const dynamicDefaultValue =
+      highestBidValue > 0 ? highestBidValue + 1.0 : baselinePrice;
 
-        document.getElementById("bid-modal")?.style.display = "flex";
-      });
-    });
-  } catch (err) {
-    grid.innerHTML =
-      '<p style="color: var(--danger-color);">Network framework connection exception encountered.</p>';
-  }
-}
+    document.getElementById("modal-item-name")?.innerText =
+      targetBtn.getAttribute("data-name");
+    document.getElementById("modal-item-price")?.innerText =
+      `$${baselinePrice.toFixed(2)}`;
+    document.getElementById("modal-highest-bid")?.innerText =
+      highestBidValue > 0 ? `$${highestBidValue.toFixed(2)}` : "None";
+    document.getElementById("bid-amount")?.value =
+      dynamicDefaultValue.toFixed(2);
+
+    document.getElementById("bid-modal").style.display = "flex";
+  })
+
 
 // Modal interface controls
 document
