@@ -79,12 +79,19 @@ async function loadMarketplaceItems() {
         const processingBaselinePrice =
           topBidValue > 0 ? topBidValue : item.price;
 
-        // FIXED: Maps lowercase relative db paths directly to your backend's capitalized Images folder
         let imgSrc = "https://placehold.co/600x400?text=No+Image";
         if (item.image) {
-          imgSrc = item.image.startsWith("http")
-            ? item.image
-            : item.image.replace("/images/", "/Images/");
+          if (item.image.startsWith("http")) {
+            imgSrc = item.image;
+          } else {
+            const filename = item.image.includes("/")
+              ? item.image.split("/").pop()
+              : item.image;
+            const serverRootUrl = API_BASE_URL.endsWith("/api")
+              ? API_BASE_URL.slice(0, -4)
+              : API_BASE_URL;
+            imgSrc = `${serverRootUrl}/Images/${filename}`;
+          }
         }
 
         return `
@@ -161,7 +168,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const user = getSessionUser();
       const amount = parseFloat(document.getElementById("bid-amount").value);
 
-      // RESTORED: Preserves your precise logic check parameters untouched
       if (isNaN(amount) || amount <= 0) {
         alert("Please enter a valid bid amount.");
         return;
@@ -299,12 +305,19 @@ async function loadAdminDashboard() {
                   .join("")
               : "No bids yet";
 
-          // FIXED: Standardized case folder maps for dashboard view image elements
           let adminImgSrc = "https://placehold.co/50?text=No+Img";
           if (item.image) {
-            adminImgSrc = item.image.startsWith("http")
-              ? item.image
-              : item.image;
+            if (item.image.startsWith("http")) {
+              adminImgSrc = item.image;
+            } else {
+              const filename = item.image.includes("/")
+                ? item.image.split("/").pop()
+                : item.image;
+              const serverRootUrl = API_BASE_URL.endsWith("/api")
+                ? API_BASE_URL.slice(0, -4)
+                : API_BASE_URL;
+              adminImgSrc = `${serverRootUrl}/Images/${filename}`;
+            }
           }
 
           return `
@@ -314,6 +327,7 @@ async function loadAdminDashboard() {
                 <td>${item.description}</td>
                 <td>$${parseFloat(item.price).toFixed(2)}</td>
                 <td>$${parseFloat(topBidValue).toFixed(2)}</td>
+                <td>${item.status || "Available"}</td>
                 <td>${item.enabled ? "Enabled" : "Disabled"}</td>
                 <td>${historyRows}</td>
                 <td class="actions-cell">
@@ -351,10 +365,11 @@ async function loadAdminDashboard() {
     formData.append("name", document.getElementById("item-name").value);
     formData.append("price", document.getElementById("item-price").value);
     formData.append("description", document.getElementById("item-desc").value);
+    formData.append("status", document.getElementById("item-status").value); // RESTORED
     formData.append("enabled", document.getElementById("item-enabled").checked);
 
     const fileInput = document.getElementById("item-image");
-    if (fileInput.files[0]) formData.append("image", fileInput.files[0]);
+    if (fileInput.files[0]) formData.append("Image", fileInput.files[0]);
 
     const url = id
       ? `${API_BASE_URL}/admin/items/${id}`
@@ -398,9 +413,13 @@ function populateEditForm(items, id) {
   document.getElementById("item-name").value = item.name;
   document.getElementById("item-price").value = item.price;
   document.getElementById("item-desc").value = item.description;
+  if (document.getElementById("item-status")) {
+    document.getElementById("item-status").value = item.status || "Available"; // RESTORED
+  }
   document.getElementById("item-enabled").checked = item.enabled;
 
-  document.getElementById("form-submit-btn").innerText = "Update Product";
+  document.getElementById("form-submit-btn").innerText =
+    "Update Product Configuration";
   const cancelBtn = document.getElementById("form-cancel-btn");
   if (cancelBtn) cancelBtn.style.display = "inline-block";
   window.scrollTo({ top: 0, behavior: "smooth" });

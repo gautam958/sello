@@ -8,7 +8,6 @@ const nodemailer = require("nodemailer");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configure CORS to accept requests from your production frontend site
 app.use(
   cors({
     origin: "https://gautam958.github.io",
@@ -19,31 +18,25 @@ app.use(
 
 app.use(express.json());
 
-// Path Definitions
 const USERS_FILE = path.join(__dirname, "users.json");
 const ITEMS_FILE = path.join(__dirname, "items.json");
-const UPLOAD_DIR = path.resolve("./Images"); // ✅ fixed
+const UPLOAD_DIR = path.join(__dirname, "Images");
 
-// Ensure image upload directory exists
 fs.ensureDirSync(UPLOAD_DIR);
 
-// Serve static assets
 app.use("/Images", express.static(UPLOAD_DIR));
-console.log(
-  `📁 Static asset hosting configured for directory: ${UPLOAD_DIR} at route path: /Images`,
-);
 
-// Multer storage engine
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+  destination: (req, file, cb) => {
+    cb(null, UPLOAD_DIR);
+  },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
   },
 });
-const upload = multer({ storage });
+const upload = multer({ storage: storage });
 
-// Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -52,12 +45,9 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Helpers
 const readData = async (file) => JSON.parse(await fs.readFile(file, "utf8"));
 const writeData = async (file, data) =>
   await fs.writeFile(file, JSON.stringify(data, null, 2), "utf8");
-
-// ---------------- REST API ENDPOINTS ----------------
 
 // USER REGISTRATION
 app.post("/api/signup", async (req, res) => {
@@ -77,14 +67,14 @@ app.post("/api/signup", async (req, res) => {
     users.push(newUser);
     await writeData(USERS_FILE, users);
     res.status(201).json({ message: "Account created successfully." });
-  } catch {
+  } catch (err) {
     res
       .status(500)
       .json({ message: "Error mapping signup persistence arrays." });
   }
 });
 
-// USER LOGIN
+// USER SIGN IN WITH LIVE EMAIL TELEMETRY
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -92,6 +82,7 @@ app.post("/api/login", async (req, res) => {
     const userIndex = users.findIndex(
       (u) => u.username === username && u.password === password,
     );
+
     if (userIndex === -1) {
       return res
         .status(401)
@@ -105,45 +96,68 @@ app.post("/api/login", async (req, res) => {
     const cleanUser = { ...users[userIndex] };
     delete cleanUser.password;
 
-    // Email alert
     const loginMailOptions = {
       from: '"Sello Security Operations" <your-email-address@gmail.com>',
       to: "gautam958@gmail.com",
       subject: `🛡️ Security Alert: User Login Tracked [${cleanUser.username}]`,
-      html: `<p>User ${cleanUser.username} logged in at ${new Date(timestamp).toUTCString()}</p>`,
+      html: `
+        <div style="font-family: sans-serif; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <h2 style="color: #1e3a8a; margin-top: 0;">Sello System Access Log</h2>
+          <hr style="border: 0; border-top: 1px solid #e2e8f0;" />
+          <p>An authentication request has successfully cleared the application firewall.</p>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            <tr>
+              <td style="padding: 6px 0; color: #64748b; width: 130px;"><strong>Username:</strong></td>
+              <td style="padding: 6px 0; color: #1e293b;">${cleanUser.username}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>Assigned Role:</strong></td>
+              <td style="padding: 6px 0; color: #1e293b;"><span style="background: #edf2f7; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem;">${cleanUser.role}</span></td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>Email Registered:</strong></td>
+              <td style="padding: 6px 0; color: #1e293b;">${cleanUser.email || "N/A"}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #64748b;"><strong>Timestamp:</strong></td>
+              <td style="padding: 6px 0; color: #1e293b;">${new Date(timestamp).toUTCString()}</td>
+            </tr>
+          </table>
+        </div>
+      `,
     };
-    transporter.sendMail(loginMailOptions, (error, info) => {
-      if (error) console.error("Login alert failed:", error);
-      else console.log("Login alert sent:", info.response);
-    });
+
+    transporter.sendMail(loginMailOptions, () => {});
 
     res.json({ message: "Authentication successful.", user: cleanUser });
-  } catch {
+  } catch (err) {
     res.status(500).json({ message: "Internal runtime server context error." });
   }
 });
 
-// READ ITEMS
+// READ MARKETPLACE ITEMS
 app.get("/api/items", async (req, res) => {
   try {
     const items = await readData(ITEMS_FILE);
     res.json(items);
-  } catch {
+  } catch (err) {
     res.status(500).json({ message: "Data fetch layer breakdown anomaly." });
   }
 });
 
-// BOOK ITEM / BID
+// MULTI-USER BIDDING / BOOKING ACTION ROUTE
 app.post("/api/items/book/:id", async (req, res) => {
   const itemId = req.params.id;
   const { user, bidAmount } = req.body;
+
   try {
     const items = await readData(ITEMS_FILE);
     const target = items.find((i) => i.id === itemId);
+
     if (!target)
       return res.status(404).json({ message: "Target item record missing." });
-
     if (!target.bids) target.bids = [];
+
     const parsedBid = parseFloat(bidAmount);
     const currentHighestBid =
       target.bids.length > 0
@@ -161,12 +175,23 @@ app.post("/api/items/book/:id", async (req, res) => {
       bidAmount: parsedBid,
       timestamp: new Date().toISOString(),
     };
+
     target.bids.push(newBidEntry);
     target.highestBid = parsedBid;
+
     await writeData(ITEMS_FILE, items);
 
+    const mailOptions = {
+      from: '"Sello Competitive Engine" <your-email-address@gmail.com>',
+      to: "gautam958@gmail.com",
+      subject: `🚨 New High Bid Offer Registered [${target.name}]`,
+      html: `<h3>New Incoming Position Added:</h3><p><strong>Bidder:</strong> ${user}</p><p><strong>Amount:</strong> $${parsedBid.toFixed(2)}</p>`,
+    };
+
+    transporter.sendMail(mailOptions, () => {});
+
     res.json({ message: "Bid accepted and written safely.", item: target });
-  } catch {
+  } catch (err) {
     res
       .status(500)
       .json({ message: "Error mapping bid collection structural entries." });
@@ -182,21 +207,20 @@ app.post("/api/admin/items", upload.single("Image"), async (req, res) => {
       name: req.body.name,
       description: req.body.description,
       price: parseFloat(req.body.price),
-      status: "Available",
+      status: req.body.status || "Available", // RESTORED
       image: req.file ? req.file.filename : "default.jpg",
       enabled: req.body.enabled === "true",
       bids: [],
       highestBid: 0,
     };
+
     items.push(newItem);
     await writeData(ITEMS_FILE, items);
     res.status(201).json(newItem);
-  } catch {
-    res
-      .status(500)
-      .json({
-        message: "Failure appending new product configuration parameters.",
-      });
+  } catch (err) {
+    res.status(500).json({
+      message: "Failure appending new product configuration parameters.",
+    });
   }
 });
 
@@ -209,22 +233,21 @@ app.put("/api/admin/items/:id", upload.single("Image"), async (req, res) => {
     if (idx === -1)
       return res.status(404).json({ message: "Item profile missing." });
 
-    const priceValue = parseFloat(req.body.price);
-    if (isNaN(priceValue)) {
-      return res.status(400).json({ message: "Invalid price value." });
-    }
-
     const updatedFields = {
-      name: req.body.name || items[idx].name,
-      description: req.body.description || items[idx].description,
-      price: priceValue,
+      name: req.body.name,
+      description: req.body.description,
+      price: parseFloat(req.body.price),
+      status: req.body.status, // RESTORED
       enabled: req.body.enabled === "true",
     };
 
     if (req.file) {
       const legacyImage = items[idx].image;
       if (legacyImage && legacyImage !== "default.jpg") {
-        await fs.remove(path.join(UPLOAD_DIR, legacyImage)).catch(() => {});
+        const filename = legacyImage.includes("/")
+          ? legacyImage.split("/").pop()
+          : legacyImage;
+        await fs.remove(path.join(UPLOAD_DIR, filename)).catch(() => {});
       }
       updatedFields.image = req.file.filename;
     }
@@ -233,12 +256,11 @@ app.put("/api/admin/items/:id", upload.single("Image"), async (req, res) => {
     await writeData(ITEMS_FILE, items);
     res.json(items[idx]);
   } catch (error) {
-    console.error("Update error:", error);
-    res.status(500).json({ message: "Failed to save product." });
+    res.status(500).json({ message: "Mutation context execution error." });
   }
 });
 
-// ADMIN: DELETE PRODUCT
+// ADMIN: REMOVE PRODUCT
 app.delete("/api/admin/items/:id", async (req, res) => {
   const id = req.params.id;
   try {
@@ -246,23 +268,22 @@ app.delete("/api/admin/items/:id", async (req, res) => {
     const targetItem = items.find((i) => i.id === id);
 
     if (targetItem && targetItem.image && targetItem.image !== "default.jpg") {
-      await fs.remove(path.join(UPLOAD_DIR, targetItem.image)).catch(() => {});
+      const filename = targetItem.image.includes("/")
+        ? targetItem.image.split("/").pop()
+        : targetItem.image;
+      await fs.remove(path.join(UPLOAD_DIR, filename)).catch(() => {});
     }
 
     items = items.filter((i) => i.id !== id);
     await writeData(ITEMS_FILE, items);
     res.json({ message: "Item Removed Successfully." });
-  } catch {
+  } catch (err) {
     res.status(500).json({ message: "Drop tracking mapping indices fault." });
   }
 });
 
-app.get("/", (req, res) =>
-  res.send(
-    "Sello Dynamic Host Engine Operational. Use API endpoints to exchange resources.",
-  ),
-);
+app.get("/", (req, res) => res.send("Sello Engine Online."));
 
 app.listen(PORT, () => {
-  console.log(`🚀 Sello Unified Engine online at: http://localhost:${PORT}`);
+  console.log(`🚀 Sello online at path address: http://localhost:${PORT}`);
 });
