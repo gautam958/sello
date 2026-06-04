@@ -5,9 +5,10 @@ const cors = require("cors");
 const multer = require("multer");
 const nodemailer = require("nodemailer");
 
-const app = (report = express());
+const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Configure CORS to accept requests from your production frontend site
 app.use(
   cors({
     origin: "https://gautam958.github.io",
@@ -18,14 +19,18 @@ app.use(
 
 app.use(express.json());
 
+// Path Definitions - Lowercase folder matching production standard environments
 const USERS_FILE = path.join(__dirname, "users.json");
 const ITEMS_FILE = path.join(__dirname, "items.json");
-const UPLOAD_DIR = path.join(__dirname, "Images");
+const UPLOAD_DIR = path.join(__dirname, "images");
 
+// Ensure image upload directory layout space exists natively
 fs.ensureDirSync(UPLOAD_DIR);
 
-app.use("/Images", express.static(UPLOAD_DIR));
+// Explicitly serve static assets out of the upload folder across the /images route web space
+app.use("/images", express.static(UPLOAD_DIR));
 
+// Storage Engine Config for Multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, UPLOAD_DIR);
@@ -37,17 +42,21 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
+// Email Transporter Layer Initialization
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "your-email-address@gmail.com",
-    pass: "your-app-password",
+    user: "your-email-address@gmail.com", // Replace with your standard system Gmail
+    pass: "your-app-password", // Replace with your generated App Password
   },
 });
 
+// Helper validation reading functions
 const readData = async (file) => JSON.parse(await fs.readFile(file, "utf8"));
 const writeData = async (file, data) =>
   await fs.writeFile(file, JSON.stringify(data, null, 2), "utf8");
+
+// ---------------- REST APIS ENDPOINTS ----------------
 
 // USER REGISTRATION
 app.post("/api/signup", async (req, res) => {
@@ -84,11 +93,12 @@ app.post("/api/login", async (req, res) => {
     );
 
     if (userIndex === -1) {
-      return res.status(401).json({ message: "Invalid credentials." });
+      return res
+        .status(401)
+        .json({ message: "Invalid operational credentials." });
     }
 
-    const timestamp = new Date().toISOString();
-    users[userIndex].lastLogin = timestamp;
+    users[userIndex].lastLogin = new Date().toISOString();
     await writeData(USERS_FILE, users);
 
     const cleanUser = { ...users[userIndex] };
@@ -96,7 +106,7 @@ app.post("/api/login", async (req, res) => {
 
     res.json({ message: "Authentication successful.", user: cleanUser });
   } catch (err) {
-    res.status(500).json({ message: "Internal server context error." });
+    res.status(500).json({ message: "Internal runtime server context error." });
   }
 });
 
@@ -106,7 +116,7 @@ app.get("/api/items", async (req, res) => {
     const items = await readData(ITEMS_FILE);
     res.json(items);
   } catch (err) {
-    res.status(500).json({ message: "Data fetch anomaly." });
+    res.status(500).json({ message: "Data fetch layer breakdown anomaly." });
   }
 });
 
@@ -119,7 +129,8 @@ app.post("/api/items/book/:id", async (req, res) => {
     const items = await readData(ITEMS_FILE);
     const target = items.find((i) => i.id === itemId);
 
-    if (!target) return res.status(404).json({ message: "Item missing." });
+    if (!target)
+      return res.status(404).json({ message: "Target item record missing." });
     if (!target.bids) target.bids = [];
 
     const parsedBid = parseFloat(bidAmount);
@@ -144,7 +155,37 @@ app.post("/api/items/book/:id", async (req, res) => {
     target.highestBid = parsedBid;
 
     await writeData(ITEMS_FILE, items);
-    res.json({ message: "Bid accepted.", item: target });
+
+    // Dynamic transactional high-priority notification outbox broadcast
+    const mailOptions = {
+      from: '"Sello Competitive Engine" <your-email-address@gmail.com>',
+      to: "gautam958@gmail.com",
+      subject: `🚨 HIGH PRIORITY: New High Bid Offer Registered [${target.name}]`,
+      headers: {
+        "X-Priority": "1",
+        "X-MSMail-Priority": "High",
+        Importance: "high",
+      },
+      html: `
+        <h2>Marketplace Booking & Bidding Activity Log</h2>
+        <hr/>
+        <p><strong>Product Name:</strong> ${target.name}</p>
+        <p><strong>Base Price Value:</strong> $${target.price}</p>
+        <br/>
+        <h3 style="color:#2563eb;">New Incoming Position Added:</h3>
+        <p><strong>Associated Bidder:</strong> ${user}</p>
+        <p><strong>Submitted Amount:</strong> <span style="font-size:1.2rem; color:#22c55e; font-weight:bold;">$${parsedBid.toFixed(2)}</span></p>
+        <p><strong>Registration Timestamp:</strong> ${new Date(newBidEntry.timestamp).toUTCString()}</p>
+      `,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error)
+        console.error("SMTP delivery process tracking fault logs:", error);
+      else console.log("Mail transaction successful: " + info.response);
+    });
+
+    res.json({ message: "Bid accepted and written safely.", item: target });
   } catch (err) {
     res
       .status(500)
@@ -153,7 +194,7 @@ app.post("/api/items/book/:id", async (req, res) => {
 });
 
 // ADMIN: CREATE PRODUCT
-app.post("/api/admin/items", upload.single("Image"), async (req, res) => {
+app.post("/api/admin/items", upload.single("image"), async (req, res) => {
   try {
     const items = await readData(ITEMS_FILE);
     const newItem = {
@@ -161,7 +202,8 @@ app.post("/api/admin/items", upload.single("Image"), async (req, res) => {
       name: req.body.name,
       description: req.body.description,
       price: parseFloat(req.body.price),
-      status: req.body.status || "Available", // RESTORED AND SERIALIZED SUCCESSFULLY
+      status: "Available",
+      // Storing ONLY the raw filename to isolate file storage paths out of data rows
       image: req.file ? req.file.filename : "default.jpg",
       enabled: req.body.enabled === "true",
       bids: [],
@@ -172,12 +214,14 @@ app.post("/api/admin/items", upload.single("Image"), async (req, res) => {
     await writeData(ITEMS_FILE, items);
     res.status(201).json(newItem);
   } catch (err) {
-    res.status(500).json({ message: "Failure saving product parameters." });
+    res.status(500).json({
+      message: "Failure appending new product configuration parameters.",
+    });
   }
 });
 
 // ADMIN: UPDATE PRODUCT
-app.put("/api/admin/items/:id", upload.single("Image"), async (req, res) => {
+app.put("/api/admin/items/:id", upload.single("image"), async (req, res) => {
   const id = req.params.id;
   try {
     const items = await readData(ITEMS_FILE);
@@ -189,7 +233,6 @@ app.put("/api/admin/items/:id", upload.single("Image"), async (req, res) => {
       name: req.body.name,
       description: req.body.description,
       price: parseFloat(req.body.price),
-      status: req.body.status, // RESTORED AND MUTATED SUCCESSFULLY
       enabled: req.body.enabled === "true",
     };
 
@@ -208,7 +251,7 @@ app.put("/api/admin/items/:id", upload.single("Image"), async (req, res) => {
     await writeData(ITEMS_FILE, items);
     res.json(items[idx]);
   } catch (error) {
-    res.status(500).json({ message: "Mutation execution error." });
+    res.status(500).json({ message: "Mutation context execution error." });
   }
 });
 
@@ -230,12 +273,19 @@ app.delete("/api/admin/items/:id", async (req, res) => {
     await writeData(ITEMS_FILE, items);
     res.json({ message: "Item Removed Successfully." });
   } catch (err) {
-    res.status(500).json({ message: "Drop tracking indices error." });
+    res.status(500).json({ message: "Drop tracking mapping indices fault." });
   }
 });
 
-app.get("/", (req, res) => res.send("Sello Engine Online."));
+// Forward standard root routing to check status
+app.get("/", (req, res) =>
+  res.send(
+    "Sello Dynamic Host Engine Operational. Use API endpoints to exchange resources.",
+  ),
+);
 
 app.listen(PORT, () => {
-  console.log(`🚀 Sello online at: http://localhost:${PORT}`);
+  console.log(
+    `🚀 Sello Unified Engine actively online at path address: http://localhost:${PORT}`,
+  );
 });
