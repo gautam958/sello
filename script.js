@@ -113,8 +113,9 @@ async function loadMarketplaceItems() {
     grid.innerHTML = visibleItems
       .map((item) => {
         const topBidValue = item.highestBid || 0;
-        const processingBaselinePrice =
-          topBidValue > 0 ? topBidValue : item.price;
+        // Card footer always shows the fixed base price (admin-managed);
+        // bids never overwrite it.
+        const processingBaselinePrice = item.price;
 
         const imgSrc = resolveImageSrc(
           item.image,

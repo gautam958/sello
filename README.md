@@ -39,10 +39,24 @@ Pages) talking to a Node API (Azure Web App).
 - **Bidding / booking** — logged-in users place a bid through a modal; the default suggested
   bid is the current highest bid + 1 (or the base price if there are no bids yet).
 - **Authentication** — username/password signup and login, with a **mandatory mobile number**
-  on signup. Session is kept client-side in `sessionStorage`. Two roles: `user` and `admin`.
+  on signup. Two roles: `user` and `admin`.
+- **Server-side auth & role checks** — login issues an HMAC-SHA256 signed token that the
+  frontend stores in `sessionStorage` and sends as `Authorization: Bearer <token>`. Every
+  admin route is verified server-side by middleware (`authenticate` + `requireAdmin`), so
+  admin access is no longer gated only in the UI.
+- **Hashed passwords** — passwords are stored as a salted **`scrypt`** hash (never plaintext);
+  legacy plaintext seed users are auto-upgraded on first login and on a one-time startup
+  migration.
+- **Admin-viewable passwords** — alongside the hash, an **AES-256-GCM** encrypted copy is
+  stored so the admin User Management screen can reveal the real password on demand. The
+  encryption key lives server-side (env), never in `users.json`.
 - **Admin dashboard** — full CRUD for products, image upload, enable/disable visibility,
   per-item bid history, and **status management**: an admin can mark an item _Booked_ and
   must select the user it is booked for (`admin.html`, admin role required).
+- **Admin User Management** — a dedicated **Manage Users** page (`users.html`, top-menu link,
+  admin only) to create, edit (email/mobile/role/password), and delete users, including a
+  password column with a show/hide toggle. The booked-user dropdown identifies users as
+  `username | email | mobile`.
 - **Email notifications** (via Nodemailer / Gmail):
   - **Login** → notifies the owner (`OWNER_EMAIL`).
   - **New bid** → high-priority email to the owner **and** a separate confirmation to the bidder.
@@ -103,6 +117,7 @@ sello/
 ├── login.html         # Login page
 ├── signup.html        # Registration page
 ├── admin.html         # Admin dashboard (product CRUD + status/booking)
+├── users.html         # Admin User Management page (CRUD + viewable passwords)
 ├── favicon.svg        # App icon (sell / price-tag), linked from every page
 ├── items.json         # Seed/persisted product data
 ├── users.json         # Seed/persisted user accounts
@@ -151,7 +166,9 @@ npx serve .        # then open the printed URL
 | `user1`  | `userpassword123`  | user  |
 
 > These are seed credentials for local development only. **Change or remove them before any
-> real deployment.**
+> real deployment.** On first start with the current `server.js`, these plaintext seed
+> passwords are automatically migrated to a `scrypt` hash + AES-encrypted copy — the
+> credentials above keep working and remain viewable on the admin Manage Users page.
 
 ## Configuration
 
@@ -161,12 +178,14 @@ production use:
 Email is configured through **environment variables** (with safe placeholder defaults so the
 app still boots without real credentials — emails are simply logged on failure):
 
-| Setting                | Env var       | Default                        | Notes                                                                                             |
-| ---------------------- | ------------- | ------------------------------ | ------------------------------------------------------------------------------------------------- |
-| Gmail account          | `EMAIL_USER`  | `your-email-address@gmail.com` | Gmail address used as the sender.                                                                 |
-| Gmail app password     | `EMAIL_PASS`  | `your-app-password`            | Gmail [App Password](https://support.google.com/accounts/answer/185833), not your login password. |
-| Notification recipient | `OWNER_EMAIL` | `gautam958@gmail.com`          | Receives login / bid / booking notifications.                                                     |
-| Server port            | `PORT`        | `3000`                         | `server.js` (`process.env.PORT`).                                                                 |
+| Setting                 | Env var            | Default                        | Notes                                                                                             |
+| ----------------------- | ------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------- |
+| Gmail account           | `EMAIL_USER`       | `your-email-address@gmail.com` | Gmail address used as the sender.                                                                 |
+| Gmail app password      | `EMAIL_PASS`       | `your-app-password`            | Gmail [App Password](https://support.google.com/accounts/answer/185833), not your login password. |
+| Notification recipient  | `OWNER_EMAIL`      | `gautam958@gmail.com`          | Receives login / bid / booking notifications.                                                     |
+| Auth token secret       | `AUTH_SECRET`      | `sello-dev-secret-change-me`   | Signs/verifies login tokens (HMAC-SHA256). Set a strong value in production.                      |
+| Password encryption key | `PASSWORD_ENC_KEY` | falls back to `AUTH_SECRET`    | Key for the AES-256-GCM reversible password copy used by the admin screen.                        |
+| Server port             | `PORT`             | `3000`                         | `server.js` (`process.env.PORT`).                                                                 |
 
 Other values still hard-coded:
 
@@ -188,7 +207,8 @@ EMAIL_USER=you@gmail.com EMAIL_PASS="your app password" OWNER_EMAIL=you@gmail.co
 ```json
 {
   "username": "rupa",
-  "password": "Abc@123",
+  "password": "scrypt$<salt>$<hash>",
+  "passwordEnc": "enc$<iv>$<tag>$<ciphertext>",
   "email": "rupsa958@gmail.com",
   "mobile": "+852 9123 4567",
   "role": "user",
@@ -197,7 +217,10 @@ EMAIL_USER=you@gmail.com EMAIL_PASS="your app password" OWNER_EMAIL=you@gmail.co
 }
 ```
 
-`mobile` is required at signup.
+`mobile` is required at signup. `password` holds a salted `scrypt` hash (used to verify
+logins); `passwordEnc` holds an AES-256-GCM encrypted copy of the real password so the admin
+screen can display it. **Plaintext passwords are never stored**, and `passwordEnc` cannot be
+decrypted without the server-side key.
 
 **Item** (`items.json`)
 
@@ -229,19 +252,24 @@ item is reserved for (prices are displayed to users in **HK$**).
 
 Base path: `/api`
 
-| Method   | Endpoint               | Auth    | Body                                                             | Description                                                              |
-| -------- | ---------------------- | ------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `POST`   | `/api/signup`          | none    | `{ username, email, password, mobile }`                          | Register a new `user` (mobile required).                                 |
-| `POST`   | `/api/login`           | none    | `{ username, password }`                                         | Authenticate; returns user (no pw); emails the owner.                    |
-| `GET`    | `/api/items`           | none    | —                                                                | List all items.                                                          |
-| `GET`    | `/api/users`           | none    | —                                                                | List users (`username`, `email`, `role`) for the admin booking dropdown. |
-| `POST`   | `/api/items/book/:id`  | user    | `{ user, bidAmount }`                                            | Place a bid; emails the owner and the bidder.                            |
-| `POST`   | `/api/admin/items`     | admin\* | `multipart/form-data` (fields + `image`, `status`, `bookedUser`) | Create a product; emails on booking.                                     |
-| `PUT`    | `/api/admin/items/:id` | admin\* | `multipart/form-data` (fields + `image`, `status`, `bookedUser`) | Update a product; emails when newly booked.                              |
-| `DELETE` | `/api/admin/items/:id` | admin\* | —                                                                | Delete a product + its image.                                            |
+| Method   | Endpoint                     | Auth  | Body                                                             | Description                                                                                            |
+| -------- | ---------------------------- | ----- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `POST`   | `/api/signup`                | none  | `{ username, email, password, mobile }`                          | Register a new `user` (mobile required; password hashed + encrypted).                                  |
+| `POST`   | `/api/login`                 | none  | `{ username, password }`                                         | Authenticate; returns user (no pw) **and a signed `token`**; emails the owner.                         |
+| `GET`    | `/api/items`                 | none  | —                                                                | List **enabled** items with display fields only (`bidsCount`, `highestBid`; no `bids[]`/`bookedUser`). |
+| `POST`   | `/api/items/book/:id`        | user  | `{ user, bidAmount }`                                            | Place a bid; emails the owner and the bidder.                                                          |
+| `GET`    | `/api/admin/users`           | admin | —                                                                | List all users incl. recovered plaintext password (for the admin screen).                              |
+| `POST`   | `/api/admin/users`           | admin | `{ username, email, mobile, role, password }`                    | Create a user (password hashed + encrypted).                                                           |
+| `PUT`    | `/api/admin/users/:username` | admin | `{ email?, mobile?, role?, password? }`                          | Update a user; re-hashes/encrypts when a new password is given.                                        |
+| `DELETE` | `/api/admin/users/:username` | admin | —                                                                | Delete a user (cannot delete your own account).                                                        |
+| `POST`   | `/api/admin/items`           | admin | `multipart/form-data` (fields + `image`, `status`, `bookedUser`) | Create a product; emails on booking.                                                                   |
+| `PUT`    | `/api/admin/items/:id`       | admin | `multipart/form-data` (fields + `image`, `status`, `bookedUser`) | Update a product; emails when newly booked.                                                            |
+| `DELETE` | `/api/admin/items/:id`       | admin | —                                                                | Delete a product + its image.                                                                          |
 
-\* Admin routes are gated on the **frontend** (`checkAdminAccess` in `script.js`); the API
-itself does not currently verify the caller's role (see [Security Notes](#security-notes)).
+Admin routes (`admin` in the table) are verified **server-side**: the request must carry a
+valid `Authorization: Bearer <token>` whose payload has `role === "admin"`. Missing/invalid
+tokens get `401`; non-admins get `403`. The frontend obtains the token from `/api/login` and
+sends it on every admin call.
 
 **Example: place a bid**
 
@@ -253,15 +281,16 @@ curl -X POST http://localhost:3000/api/items/book/1 \
 
 ## Frontend Pages
 
-| Page          | Purpose                                                                         |
-| ------------- | ------------------------------------------------------------------------------- |
-| `index.html`  | Marketplace grid; opens the bid modal (login required to bid).                  |
-| `login.html`  | Sign in; admins are redirected to `admin.html`, users to `index.html`.          |
-| `signup.html` | Register a new account (mobile number + client-side password confirmation).     |
-| `admin.html`  | Product CRUD, image upload, visibility toggle, bid history, and status/booking. |
+| Page          | Purpose                                                                                   |
+| ------------- | ----------------------------------------------------------------------------------------- |
+| `index.html`  | Marketplace grid; opens the bid modal (login required to bid).                            |
+| `login.html`  | Sign in; admins are redirected to `admin.html`, users to `index.html`.                    |
+| `signup.html` | Register a new account (mobile number + client-side password confirmation).               |
+| `admin.html`  | Product CRUD, image upload, visibility toggle, bid history, and status/booking.           |
+| `users.html`  | **Manage Users** (admin only): create/edit/delete users + viewable passwords (show/hide). |
 
 Each page calls `initApp("<page>")`, which wires up the navbar and the page-specific logic in
-`script.js`.
+`script.js`. The **Manage Users** link appears in the top menu only for admins.
 
 ## Deployment
 
@@ -277,17 +306,33 @@ URL; CORS in `server.js` allows the `https://gautam958.github.io` origin.
 
 ## Security Notes
 
-This project is a learning/demo app. Before using it for anything real, address:
+This project is a learning/demo app. The following hardening is now in place (no database):
 
-- **Plaintext passwords** — passwords are stored as-is in `users.json`. Hash them (e.g.
-  `bcrypt`) and never return them to the client.
-- **No server-side authorization** — admin endpoints are only protected in the UI. Add real
-  auth (sessions/JWT) and role checks on the API.
-- **Secrets in source** — Gmail credentials are now read from `EMAIL_USER` / `EMAIL_PASS`
-  environment variables (with placeholder defaults). Always supply them via env/secrets in
-  production rather than committing real values.
+- **Hashed passwords** — passwords are stored as a salted `scrypt` hash, never plaintext.
+  Legacy plaintext seed users are migrated automatically. Logins are verified with a
+  constant-time comparison.
+- **Reversible admin-viewable copy** — an AES-256-GCM encrypted copy (`passwordEnc`) lets the
+  admin screen show the real password. The key lives only on the server
+  (`PASSWORD_ENC_KEY` / `AUTH_SECRET`), so a leaked `users.json` cannot be decrypted.
+  Note: storing recoverable passwords is intentionally less secure than hash-only — it exists
+  because admin visibility was an explicit product requirement.
+- **Server-side authorization** — admin endpoints require a valid signed token with an
+  `admin` role; they are no longer protected only in the UI.
+- **Minimal data exposure** — the public `/api/items` returns only enabled items with display
+  fields (no `bids[]`, no `bookedUser`); the old public `/api/users` endpoint was removed in
+  favor of admin-only `/api/admin/users`.
+- **Secrets via env** — Gmail credentials (`EMAIL_USER`/`EMAIL_PASS`), the token secret
+  (`AUTH_SECRET`), and the password key (`PASSWORD_ENC_KEY`) are read from environment
+  variables. Supply strong values in production; the built-in defaults are for local dev only.
+
+Still worth doing before real production use:
+
 - **Flat-file storage** — concurrent writes to JSON files can race; a real datastore is
-  recommended for production.
+  recommended.
+- **Token storage** — tokens live in `sessionStorage`; consider httpOnly cookies to reduce
+  XSS exposure.
+- **Reconsider password recovery** — for maximum security, prefer admin password _reset_
+  (set a new one) over _view_, which avoids storing any recoverable form.
 
 ## Detailed Prompt (recreate Sello from scratch)
 
@@ -333,9 +378,10 @@ use as a build spec) to reconstruct this application:
 > - Define `API_BASE_URL` that points to a hosted backend when served from
 >   `https://gautam958.github.io`, otherwise the relative `/api`.
 > - `index.html`: fetch `/api/items`, render only `enabled` items as cards (image, name,
->   description, bid count, current price = highest bid or base price) with a "Book / Place
->   Bid" button. Clicking it (when logged in) opens a modal pre-filled with `highestBid + 1`
->   and submits a bid to `/api/items/book/:id`. Prompt unauthenticated users to log in.
+>   description, bid count, and the **fixed base price** — bids do not overwrite the displayed
+>   price; only the admin can change it) with a "Book / Place Bid" button. Clicking it (when
+>   logged in) opens a modal pre-filled with `highestBid + 1` and submits a bid to
+>   `/api/items/book/:id`. Prompt unauthenticated users to log in.
 >   - `login.html` / `signup.html`: forms that POST to `/api/login` and `/api/signup`; signup
 >     confirms the password client-side; after login redirect admins to `admin.html`.
 > - `admin.html`: guard with an admin-role check (redirect non-admins). Provide a create/update
@@ -350,3 +396,27 @@ use as a build spec) to reconstruct this application:
 > `npm start` script (`node server.js`) and dependencies: `express`, `cors`, `fs-extra`,
 > `multer`, `nodemailer`. Seed `users.json` with an `admin` and a `user1` account and
 > `items.json` with a couple of sample products.
+>
+> **Security & user-management additions (no database, Node built-in `crypto` only):**
+>
+> - On signup require a mandatory `mobile` field. Hash passwords with `crypto.scrypt`
+>   (random salt, format `scrypt$<salt>$<hash>`) and also store an AES-256-GCM encrypted copy
+>   `passwordEnc` (format `enc$<iv>$<tag>$<ciphertext>`) so an admin screen can display the
+>   real password. Derive the encryption key from `PASSWORD_ENC_KEY` (falling back to
+>   `AUTH_SECRET`) — never store it in `users.json`. Verify logins with `crypto.timingSafeEqual`.
+> - On `POST /api/login`, after verifying credentials, issue a signed token
+>   (base64url JSON payload + HMAC-SHA256 signature using `AUTH_SECRET`, ~7-day expiry) and
+>   return it alongside the user. Auto-upgrade any legacy plaintext password to hash+encrypted
+>   on login, and run a one-time migration over `users.json` at startup.
+> - Add `authenticate` middleware (verifies the `Authorization: Bearer <token>`) and
+>   `requireAdmin` (also checks `role === "admin"`). Protect all `/api/admin/*` routes with it.
+> - Make `/api/items` return only `enabled` items with display fields (`bidsCount`,
+>   `highestBid`) — never the full `bids[]` or `bookedUser`. Remove any public `/api/users`
+>   endpoint; instead add admin-only user CRUD: `GET/POST /api/admin/users`,
+>   `PUT/DELETE /api/admin/users/:username` (GET returns each user's recovered password; DELETE
+>   forbids deleting your own account).
+> - Frontend: store the token in `sessionStorage` (`sello_token`) on login and send it via an
+>   `Authorization: Bearer` header on every admin call. Add a dedicated **`users.html`**
+>   Manage Users page (top-menu link shown only to admins) with a create form and a table
+>   (username, email, mobile, password with show/hide toggle, role, created, last login,
+>   edit/delete). In the admin booking dropdown, label users as `username | email | mobile`.
