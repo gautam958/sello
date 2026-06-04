@@ -2,8 +2,9 @@
 
 Sello is a lightweight online **marketplace with bidding/booking**. Visitors browse a grid
 of items, registered users place bids, and admins manage the product catalog (create, edit,
-delete, upload images). The backend is a small Express REST API that persists data to flat
-JSON files and emails the owner whenever a new bid is placed.
+delete, upload images, and book items to specific users). The backend is a small Express REST
+API that persists data to flat JSON files and sends email notifications on login, bidding, and
+booking.
 
 The project is intentionally simple — no database, no build step, no framework on the
 frontend — which makes it easy to read, run locally, and deploy as a static site (GitHub
@@ -30,16 +31,25 @@ Pages) talking to a Node API (Azure Web App).
 
 ## Features
 
-- **Marketplace listing** — public grid of enabled items with image, description, price, and
-  live bid count (`index.html`).
+- **Marketplace listing** — public grid of enabled items with image, description, price
+  (in **HK$**), live bid count, and an availability status badge (`index.html`).
+- **Status badge** — each card shows an _Available_ (green) or _Booked_ (red) badge overlaid
+  on the item image. Booked items cannot be bid on.
+- **Image lightbox** — clicking any item image opens a full-size popup overlay.
 - **Bidding / booking** — logged-in users place a bid through a modal; the default suggested
   bid is the current highest bid + 1 (or the base price if there are no bids yet).
-- **Authentication** — username/password signup and login. Session is kept client-side in
-  `sessionStorage`. Two roles: `user` and `admin`.
-- **Admin dashboard** — full CRUD for products, image upload, enable/disable visibility, and
-  per-item bid history (`admin.html`, admin role required).
-- **Email notifications** — every new bid triggers a high-priority email to the owner via
-  Nodemailer (Gmail).
+- **Authentication** — username/password signup and login, with a **mandatory mobile number**
+  on signup. Session is kept client-side in `sessionStorage`. Two roles: `user` and `admin`.
+- **Admin dashboard** — full CRUD for products, image upload, enable/disable visibility,
+  per-item bid history, and **status management**: an admin can mark an item _Booked_ and
+  must select the user it is booked for (`admin.html`, admin role required).
+- **Email notifications** (via Nodemailer / Gmail):
+  - **Login** → notifies the owner (`OWNER_EMAIL`).
+  - **New bid** → high-priority email to the owner **and** a separate confirmation to the bidder.
+  - **Booking** → confirmation to the booked user **and** the owner.
+- **Scrolling marquee** — a pickup-instructions banner sits directly below the navigation on
+  every page.
+- **App icon** — an SVG favicon (`favicon.svg`) is linked from every page.
 - **Zero-database persistence** — users and items are stored in `users.json` / `items.json`;
   uploaded images are stored on disk.
 
@@ -92,7 +102,8 @@ sello/
 ├── index.html         # Marketplace (item grid + bid modal)
 ├── login.html         # Login page
 ├── signup.html        # Registration page
-├── admin.html         # Admin dashboard (product CRUD)
+├── admin.html         # Admin dashboard (product CRUD + status/booking)
+├── favicon.svg        # App icon (sell / price-tag), linked from every page
 ├── items.json         # Seed/persisted product data
 ├── users.json         # Seed/persisted user accounts
 ├── Images/            # Uploaded / seed product images
@@ -147,16 +158,28 @@ npx serve .        # then open the printed URL
 A few values are currently hard-coded and should be turned into environment variables before
 production use:
 
-| Setting                | Location                         | Notes                                         |
-| ---------------------- | -------------------------------- | --------------------------------------------- |
-| `PORT`                 | `server.js` (`process.env.PORT`) | Defaults to `3000`.                           |
-| CORS origin            | `server.js`                      | Locked to `https://gautam958.github.io`.      |
-| Gmail user/password    | `server.js` (Nodemailer)         | Placeholder `your-email-address@gmail.com`.   |
-| Notification recipient | `server.js`                      | Bid emails are sent to `gautam958@gmail.com`. |
-| Hosted API URL         | `script.js` (`API_BASE_URL`)     | Azure URL used when served from GitHub Pages. |
+Email is configured through **environment variables** (with safe placeholder defaults so the
+app still boots without real credentials — emails are simply logged on failure):
 
-To enable email, replace the Nodemailer `auth` block with a real Gmail address and an
-[App Password](https://support.google.com/accounts/answer/185833).
+| Setting                | Env var       | Default                        | Notes                                                                                             |
+| ---------------------- | ------------- | ------------------------------ | ------------------------------------------------------------------------------------------------- |
+| Gmail account          | `EMAIL_USER`  | `your-email-address@gmail.com` | Gmail address used as the sender.                                                                 |
+| Gmail app password     | `EMAIL_PASS`  | `your-app-password`            | Gmail [App Password](https://support.google.com/accounts/answer/185833), not your login password. |
+| Notification recipient | `OWNER_EMAIL` | `gautam958@gmail.com`          | Receives login / bid / booking notifications.                                                     |
+| Server port            | `PORT`        | `3000`                         | `server.js` (`process.env.PORT`).                                                                 |
+
+Other values still hard-coded:
+
+| Setting        | Location                     | Notes                                         |
+| -------------- | ---------------------------- | --------------------------------------------- |
+| CORS origin    | `server.js`                  | Locked to `https://gautam958.github.io`.      |
+| Hosted API URL | `script.js` (`API_BASE_URL`) | Azure URL used when served from GitHub Pages. |
+
+To enable real email delivery, start the server with the credentials set, e.g.:
+
+```bash
+EMAIL_USER=you@gmail.com EMAIL_PASS="your app password" OWNER_EMAIL=you@gmail.com npm start
+```
 
 ## Data Model
 
@@ -167,11 +190,14 @@ To enable email, replace the Nodemailer `auth` block with a real Gmail address a
   "username": "rupa",
   "password": "Abc@123",
   "email": "rupsa958@gmail.com",
+  "mobile": "+852 9123 4567",
   "role": "user",
   "createdAt": "2026-06-03T13:42:25.061Z",
   "lastLogin": "2026-06-03T16:28:43.582Z"
 }
 ```
+
+`mobile` is required at signup.
 
 **Item** (`items.json`)
 
@@ -182,6 +208,7 @@ To enable email, replace the Nodemailer `auth` block with a real Gmail address a
   "description": "Genuine brown leather jacket, size L.",
   "price": 120,
   "status": "Available",
+  "bookedUser": "",
   "image": "/images/jacket.jpg",
   "enabled": true,
   "bids": [
@@ -195,19 +222,23 @@ To enable email, replace the Nodemailer `auth` block with a real Gmail address a
 }
 ```
 
+`status` is `"Available"` or `"Booked"`; when `Booked`, `bookedUser` holds the username the
+item is reserved for (prices are displayed to users in **HK$**).
+
 ## API Reference
 
 Base path: `/api`
 
-| Method   | Endpoint               | Auth    | Body                                     | Description                         |
-| -------- | ---------------------- | ------- | ---------------------------------------- | ----------------------------------- |
-| `POST`   | `/api/signup`          | none    | `{ username, email, password }`          | Register a new `user`.              |
-| `POST`   | `/api/login`           | none    | `{ username, password }`                 | Authenticate; returns user (no pw). |
-| `GET`    | `/api/items`           | none    | —                                        | List all items.                     |
-| `POST`   | `/api/items/book/:id`  | user    | `{ user, bidAmount }`                    | Place a bid; emails the owner.      |
-| `POST`   | `/api/admin/items`     | admin\* | `multipart/form-data` (fields + `image`) | Create a product.                   |
-| `PUT`    | `/api/admin/items/:id` | admin\* | `multipart/form-data` (fields + `image`) | Update a product.                   |
-| `DELETE` | `/api/admin/items/:id` | admin\* | —                                        | Delete a product + its image.       |
+| Method   | Endpoint               | Auth    | Body                                                             | Description                                                              |
+| -------- | ---------------------- | ------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `POST`   | `/api/signup`          | none    | `{ username, email, password, mobile }`                          | Register a new `user` (mobile required).                                 |
+| `POST`   | `/api/login`           | none    | `{ username, password }`                                         | Authenticate; returns user (no pw); emails the owner.                    |
+| `GET`    | `/api/items`           | none    | —                                                                | List all items.                                                          |
+| `GET`    | `/api/users`           | none    | —                                                                | List users (`username`, `email`, `role`) for the admin booking dropdown. |
+| `POST`   | `/api/items/book/:id`  | user    | `{ user, bidAmount }`                                            | Place a bid; emails the owner and the bidder.                            |
+| `POST`   | `/api/admin/items`     | admin\* | `multipart/form-data` (fields + `image`, `status`, `bookedUser`) | Create a product; emails on booking.                                     |
+| `PUT`    | `/api/admin/items/:id` | admin\* | `multipart/form-data` (fields + `image`, `status`, `bookedUser`) | Update a product; emails when newly booked.                              |
+| `DELETE` | `/api/admin/items/:id` | admin\* | —                                                                | Delete a product + its image.                                            |
 
 \* Admin routes are gated on the **frontend** (`checkAdminAccess` in `script.js`); the API
 itself does not currently verify the caller's role (see [Security Notes](#security-notes)).
@@ -222,12 +253,12 @@ curl -X POST http://localhost:3000/api/items/book/1 \
 
 ## Frontend Pages
 
-| Page          | Purpose                                                                |
-| ------------- | ---------------------------------------------------------------------- |
-| `index.html`  | Marketplace grid; opens the bid modal (login required to bid).         |
-| `login.html`  | Sign in; admins are redirected to `admin.html`, users to `index.html`. |
-| `signup.html` | Register a new account (client-side password confirmation).            |
-| `admin.html`  | Product CRUD, image upload, visibility toggle, and bid history.        |
+| Page          | Purpose                                                                         |
+| ------------- | ------------------------------------------------------------------------------- |
+| `index.html`  | Marketplace grid; opens the bid modal (login required to bid).                  |
+| `login.html`  | Sign in; admins are redirected to `admin.html`, users to `index.html`.          |
+| `signup.html` | Register a new account (mobile number + client-side password confirmation).     |
+| `admin.html`  | Product CRUD, image upload, visibility toggle, bid history, and status/booking. |
 
 Each page calls `initApp("<page>")`, which wires up the navbar and the page-specific logic in
 `script.js`.
@@ -252,8 +283,9 @@ This project is a learning/demo app. Before using it for anything real, address:
   `bcrypt`) and never return them to the client.
 - **No server-side authorization** — admin endpoints are only protected in the UI. Add real
   auth (sessions/JWT) and role checks on the API.
-- **Secrets in source** — the Gmail credentials live in `server.js`. Move them to environment
-  variables / secrets.
+- **Secrets in source** — Gmail credentials are now read from `EMAIL_USER` / `EMAIL_PASS`
+  environment variables (with placeholder defaults). Always supply them via env/secrets in
+  production rather than committing real values.
 - **Flat-file storage** — concurrent writes to JSON files can race; a real datastore is
   recommended for production.
 
