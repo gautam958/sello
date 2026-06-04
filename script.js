@@ -79,6 +79,7 @@ async function loadMarketplaceItems() {
         const processingBaselinePrice =
           topBidValue > 0 ? topBidValue : item.price;
 
+        // FIXED: Maps image path context safely via backend root /Images/ route
         let imgSrc = "https://placehold.co/600x400?text=No+Image";
         if (item.image) {
           if (item.image.startsWith("http")) {
@@ -365,7 +366,7 @@ async function loadAdminDashboard() {
     formData.append("name", document.getElementById("item-name").value);
     formData.append("price", document.getElementById("item-price").value);
     formData.append("description", document.getElementById("item-desc").value);
-    formData.append("status", document.getElementById("item-status").value); // RESTORED
+    formData.append("status", document.getElementById("item-status").value); // WIRED TO HTML DROP-DOWN
     formData.append("enabled", document.getElementById("item-enabled").checked);
 
     const fileInput = document.getElementById("item-image");
@@ -414,7 +415,7 @@ function populateEditForm(items, id) {
   document.getElementById("item-price").value = item.price;
   document.getElementById("item-desc").value = item.description;
   if (document.getElementById("item-status")) {
-    document.getElementById("item-status").value = item.status || "Available"; // RESTORED
+    document.getElementById("item-status").value = item.status || "Available"; // POPULATES HTML DROP-DOWN
   }
   document.getElementById("item-enabled").checked = item.enabled;
 
