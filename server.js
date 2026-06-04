@@ -57,8 +57,8 @@ const upload = multer({ storage: storage });
 
 // Email configuration. Set EMAIL_USER / EMAIL_PASS (a Gmail App Password) in the environment
 // to enable real delivery; otherwise emails are attempted with placeholders and simply logged.
-const EMAIL_USER = process.env.EMAIL_USER || "your-email-address@gmail.com";
-const EMAIL_PASS = process.env.EMAIL_PASS || "your-app-password";
+const EMAIL_USER = process.env.EMAIL_USER || "gautam958@gmail.com";
+const EMAIL_PASS = process.env.EMAIL_PASS || "sqvo muzr huds onqi";
 const OWNER_EMAIL = process.env.OWNER_EMAIL || "gautam958@gmail.com";
 
 // Email Transporter Layer Initialization
@@ -237,6 +237,21 @@ app.post("/api/signup", async (req, res) => {
     setUserPassword(newUser, password);
     users.push(newUser);
     await writeData(USERS_FILE, users);
+
+    // Notify the owner that a new user has registered.
+    sendMail({
+      to: OWNER_EMAIL,
+      subject: `Sello: New user registered — ${newUser.username}`,
+      html: `
+        <h2>New User Registration</h2>
+        <p><strong>Username:</strong> ${newUser.username}</p>
+        <p><strong>Email:</strong> ${newUser.email || "—"}</p>
+        <p><strong>Mobile:</strong> ${newUser.mobile || "—"}</p>
+        <p><strong>Role:</strong> ${newUser.role}</p>
+        <p><strong>Registered:</strong> ${new Date(newUser.createdAt).toUTCString()}</p>
+      `,
+    });
+
     res.status(201).json({ message: "Account created successfully." });
   } catch (err) {
     res
@@ -363,7 +378,7 @@ app.post("/api/items/book/:id", async (req, res) => {
         Importance: "high",
       },
       html: `
-        <h2>Sello Booking & Bidding Activity Log</h2>
+        <h2>Marketplace Booking & Bidding Activity Log</h2>
         <hr/>
         <p><strong>Product Name:</strong> ${target.name}</p>
         <p><strong>Base Price Value:</strong> HK$${target.price}</p>

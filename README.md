@@ -58,6 +58,7 @@ Pages) talking to a Node API (Azure Web App).
   password column with a show/hide toggle. The booked-user dropdown identifies users as
   `username | email | mobile`.
 - **Email notifications** (via Nodemailer / Gmail):
+  - **Signup** → notifies the owner (`OWNER_EMAIL`) with the new user's username, email, mobile, and role.
   - **Login** → notifies the owner (`OWNER_EMAIL`).
   - **New bid** → high-priority email to the owner **and** a separate confirmation to the bidder.
   - **Booking** → confirmation to the booked user **and** the owner.
@@ -254,7 +255,7 @@ Base path: `/api`
 
 | Method   | Endpoint                     | Auth  | Body                                                             | Description                                                                                            |
 | -------- | ---------------------------- | ----- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `POST`   | `/api/signup`                | none  | `{ username, email, password, mobile }`                          | Register a new `user` (mobile required; password hashed + encrypted).                                  |
+| `POST`   | `/api/signup`                | none  | `{ username, email, password, mobile }`                          | Register a new `user` (mobile required; password hashed + encrypted); emails the owner.                |
 | `POST`   | `/api/login`                 | none  | `{ username, password }`                                         | Authenticate; returns user (no pw) **and a signed `token`**; emails the owner.                         |
 | `GET`    | `/api/items`                 | none  | —                                                                | List **enabled** items with display fields only (`bidsCount`, `highestBid`; no `bids[]`/`bookedUser`). |
 | `POST`   | `/api/items/book/:id`        | user  | `{ user, bidAmount }`                                            | Place a bid; emails the owner and the bidder.                                                          |
