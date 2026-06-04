@@ -60,8 +60,8 @@ const upload = multer({ storage: storage });
 
 // Email configuration. Set EMAIL_USER / EMAIL_PASS (a Gmail App Password) in the environment
 // to enable real delivery; otherwise emails are attempted with placeholders and simply logged.
-const EMAIL_USER = process.env.EMAIL_USER || "gautam958@gmail.com";
-const EMAIL_PASS = process.env.EMAIL_PASS || "sqvo muzr huds onqi";
+const EMAIL_USER = process.env.EMAIL_USER || "your-email-address@gmail.com";
+const EMAIL_PASS = process.env.EMAIL_PASS || "your-app-password";
 const OWNER_EMAIL = process.env.OWNER_EMAIL || "gautam958@gmail.com";
 
 // Email Transporter Layer Initialization
@@ -76,11 +76,33 @@ const transporter = nodemailer.createTransport({
 // Centralized mail sender. Never throws — logs failures so the request still succeeds even
 // when SMTP credentials are placeholders or unreachable.
 const sendMail = (mailOptions) => {
+  const to = mailOptions.to || "";
+  const subject = mailOptions.subject || "";
   transporter.sendMail(
     { from: `"Sello" <${EMAIL_USER}>`, ...mailOptions },
     (error, info) => {
-      if (error) console.error("SMTP delivery fault:", error.message);
-      else console.log("Mail sent: " + info.response);
+      if (error) {
+        // Capture the exact SMTP failure so admins can diagnose it from the Logs page.
+        const parts = [
+          `to: ${to}`,
+          `subject: ${subject}`,
+          error.code ? `code: ${error.code}` : "",
+          error.responseCode ? `responseCode: ${error.responseCode}` : "",
+          error.response ? `response: ${error.response}` : "",
+          `error: ${error.message}`,
+        ].filter(Boolean);
+        console.error("SMTP delivery fault:", error.message);
+        logActivity("email_failed", `Email NOT sent to ${to}`, {
+          user: to,
+          details: parts.join(" | "),
+        });
+      } else {
+        console.log("Mail sent: " + info.response);
+        logActivity("email_sent", `Email sent to ${to}`, {
+          user: to,
+          details: `subject: ${subject} | response: ${info.response}`,
+        });
+      }
     },
   );
 };

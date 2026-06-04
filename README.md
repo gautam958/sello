@@ -60,8 +60,12 @@ Pages) talking to a Node API (Azure Web App).
 - **Activity logging** — a dedicated **Logs** page (`logs.html`, top-menu link, admin only)
   shows an append-only audit trail so the admin can review user behaviour and spot potential
   bugs. The server records `signup`, `login`, `login_failed`, `bid`, `booking`, user changes,
-  item changes, and server `error` events to `logs.json` (capped at the newest 1000 entries).
-  The page is colour-coded by type and supports filtering by type, refreshing, and clearing.
+  item changes, **email delivery** (`email_sent` / `email_failed`), and server `error` events
+  to `logs.json` (capped at the newest 1000 entries). Every email attempt is logged: successes
+  record the recipient, subject, and SMTP response; failures record the recipient, subject, and
+  the **exact SMTP error** (e.g. `code: EAUTH | responseCode: 535 | response: ...`) so email
+  delivery problems can be diagnosed straight from the Logs page. The page is colour-coded by
+  type and supports filtering by type, refreshing, and clearing.
 - **Email notifications** (via Nodemailer / Gmail):
   - **Signup** → notifies the owner (`OWNER_EMAIL`) with the new user's username, email, mobile, and role.
   - **Login** → notifies the owner (`OWNER_EMAIL`).

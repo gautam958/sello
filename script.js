@@ -767,6 +767,8 @@ const LOG_TYPE_COLORS = {
   login_failed: "#f59e0b",
   bid: "#7c3aed",
   booking: "#0891b2",
+  email_sent: "#0ea5e9",
+  email_failed: "#dc2626",
   user: "#0d9488",
   item: "#64748b",
   error: "#ef4444",
