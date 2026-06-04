@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#4f46e5"/>
+  <path d="M18 14h18l14 14-20 20-14-14V18a4 4 0 0 1 4-4z" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="28" cy="26" r="4" fill="#fff"/>
+  <path d="M22 42l20-20" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="17" y="55" font-family="sans-serif" font-size="9" fill="#c7d2fe" font-weight="bold">SELL</text>
+</svg>

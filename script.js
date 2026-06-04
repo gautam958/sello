@@ -32,6 +32,7 @@ function initApp(page) {
   } else if (page === "admin") {
     checkAdminAccess();
     loadAdminDashboard();
+    initAdminStatusControls();
   }
 }
 
@@ -99,18 +100,27 @@ async function loadMarketplaceItems() {
           "https://placehold.co/600x400?text=No+Image",
         );
 
+        const isBooked = item.status === "Booked";
+        const statusClass = isBooked ? "status-booked" : "status-available";
+        const statusLabel = isBooked ? "Booked" : "Available";
+
         return `
           <div class="card">
-              <img src="${imgSrc}" alt="${item.name}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'; this.onerror=null;">
+              <div class="card-img-wrapper">
+                <img src="${imgSrc}" alt="${item.name}" class="card-img" data-full="${imgSrc}" onerror="this.src='https://placehold.co/600x400?text=No+Image'; this.onerror=null;">
+                <span class="status-badge ${statusClass}">${statusLabel}</span>
+              </div>
               <div class="card-content">
                   <h3 class="card-title">${item.name}</h3>
                   <p class="card-desc">${item.description}</p>
                   <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Bids: ${item.bids ? item.bids.length : 0}</p>
                   <div class="card-footer">
-                      <span class="price">$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
-                      <button class="btn open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">
-                          Book / Place Bid
-                      </button>
+                      <span class="price">HK$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
+                      ${
+                        isBooked
+                          ? '<button class="btn" disabled style="opacity:0.5;cursor:default;">Booked</button>'
+                          : `<button class="btn open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">Book / Place Bid</button>`
+                      }
                   </div>
               </div>
           </div>
@@ -119,6 +129,7 @@ async function loadMarketplaceItems() {
       .join("");
 
     setupModalTriggers();
+    setupImageLightbox();
   } catch (err) {
     grid.innerHTML =
       '<p style="color: var(--danger-color);">Failed to load items.</p>';
@@ -147,9 +158,9 @@ function setupModalTriggers() {
       document.getElementById("modal-item-name").innerText =
         buttonTarget.getAttribute("data-name");
       document.getElementById("modal-item-price").innerText =
-        `$${baselinePrice.toFixed(2)}`;
+        `HK$${baselinePrice.toFixed(2)}`;
       document.getElementById("modal-highest-bid").innerText =
-        highestBidValue > 0 ? `$${highestBidValue.toFixed(2)}` : "None";
+        highestBidValue > 0 ? `HK$${highestBidValue.toFixed(2)}` : "None";
       document.getElementById("bid-amount").value =
         dynamicDefaultValue.toFixed(2);
 
@@ -247,7 +258,14 @@ function setupSignupHandler() {
       const confirmPass = document.getElementById(
         "signup-confirm-password",
       ).value;
+      const mobile = document.getElementById("signup-mobile").value.trim();
       const errText = document.getElementById("signup-error");
+
+      if (!mobile) {
+        errText.innerText = "Mobile number is required.";
+        errText.style.display = "block";
+        return;
+      }
 
       if (password !== confirmPass) {
         errText.innerText = "Passwords do not match.";
@@ -259,7 +277,7 @@ function setupSignupHandler() {
         const res = await fetch(`${API_BASE_URL}/signup`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, email, password }),
+          body: JSON.stringify({ username, email, password, mobile }),
         });
 
         const data = await res.json();
@@ -306,7 +324,7 @@ async function loadAdminDashboard() {
               ? item.bids
                   .map(
                     (b) =>
-                      `<div style="border-bottom: 1px dashed #ccc; padding: 2px;">${b.userId}: $${b.bidAmount}</div>`,
+                      `<div style="border-bottom: 1px dashed #ccc; padding: 2px;">${b.userId}: HK$${b.bidAmount}</div>`,
                   )
                   .join("")
               : "No bids yet";
@@ -321,8 +339,9 @@ async function loadAdminDashboard() {
                 <td><img src="${adminImgSrc}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'; this.onerror=null;"></td>
                 <td>${item.name}</td>
                 <td>${item.description}</td>
-                <td>$${parseFloat(item.price).toFixed(2)}</td>
-                <td>$${parseFloat(topBidValue).toFixed(2)}</td>
+                <td>HK$${parseFloat(item.price).toFixed(2)}</td>
+                <td>HK$${parseFloat(topBidValue).toFixed(2)}</td>
+                <td><span class="status-badge ${item.status === "Booked" ? "status-booked" : "status-available"}" style="font-size:0.75rem;padding:2px 8px;">${item.status || "Available"}</span>${item.bookedUser ? " → " + item.bookedUser : ""}</td>
                 <td>${item.enabled ? "Enabled" : "Disabled"}</td>
                 <td>${historyRows}</td>
                 <td class="actions-cell">
@@ -361,6 +380,9 @@ async function loadAdminDashboard() {
     formData.append("price", document.getElementById("item-price").value);
     formData.append("description", document.getElementById("item-desc").value);
     formData.append("enabled", document.getElementById("item-enabled").checked);
+    formData.append("status", document.getElementById("item-status").value);
+    const bookedUserEl = document.getElementById("item-booked-user");
+    formData.append("bookedUser", bookedUserEl ? bookedUserEl.value : "");
 
     const fileInput = document.getElementById("item-image");
     if (fileInput.files[0]) formData.append("image", fileInput.files[0]);
@@ -409,10 +431,63 @@ function populateEditForm(items, id) {
   document.getElementById("item-desc").value = item.description;
   document.getElementById("item-enabled").checked = item.enabled;
 
+  const statusSel = document.getElementById("item-status");
+  if (statusSel) {
+    statusSel.value = item.status || "Available";
+    statusSel.dispatchEvent(new Event("change"));
+  }
+  const bookedUserSel = document.getElementById("item-booked-user");
+  if (bookedUserSel && item.bookedUser) bookedUserSel.value = item.bookedUser;
+
   document.getElementById("form-submit-btn").innerText = "Update Product";
   const cancelBtn = document.getElementById("form-cancel-btn");
   if (cancelBtn) cancelBtn.style.display = "inline-block";
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// Populate admin user dropdown and toggle visibility based on status.
+async function initAdminStatusControls() {
+  const statusSel = document.getElementById("item-status");
+  const bookedGroup = document.getElementById("booked-user-group");
+  const bookedUserSel = document.getElementById("item-booked-user");
+  if (!statusSel || !bookedGroup || !bookedUserSel) return;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/users`);
+    const users = await res.json();
+    bookedUserSel.innerHTML =
+      '<option value="">-- Select User --</option>' +
+      users
+        .filter((u) => u.role !== "admin")
+        .map(
+          (u) =>
+            `<option value="${u.username}">${u.username} (${u.email})</option>`,
+        )
+        .join("");
+  } catch (e) {
+    console.error("Could not load users for dropdown.");
+  }
+
+  const toggle = () => {
+    const show = statusSel.value === "Booked";
+    bookedGroup.style.display = show ? "" : "none";
+    bookedUserSel.required = show;
+  };
+  statusSel.addEventListener("change", toggle);
+  toggle();
+}
+
+// Image lightbox — clicking a card image opens a full-size overlay.
+function setupImageLightbox() {
+  document.querySelectorAll(".card-img").forEach((img) => {
+    img.style.cursor = "pointer";
+    img.addEventListener("click", () => {
+      const lb = document.getElementById("image-lightbox");
+      if (!lb) return;
+      document.getElementById("lightbox-img").src = img.src;
+      lb.style.display = "flex";
+    });
+  });
 }
 
 async function deleteItem(id, callback) {

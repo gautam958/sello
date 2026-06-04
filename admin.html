@@ -5,12 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sello - Admin Items</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   </head>
   <body>
     <header>
       <a href="index.html" class="logo">Sello Dashboard</a>
       <nav id="nav-menu"></nav>
     </header>
+
+    <div class="marquee">
+      <span
+        >All Items Pick From Tung Chung ( Coastal Skyline) Once Admin Confirm
+        The Items you will received and detailed instruction , Pickup must be
+        before 16-June-2026.</span
+      >
+    </div>
 
     <main class="container">
       <h2>Add / Update Product Item</h2>
@@ -29,7 +38,7 @@
               <input type="text" id="item-name" required />
             </div>
             <div class="form-group">
-              <label for="item-price">Price ($)</label>
+              <label for="item-price">Price (HK$)</label>
               <input type="number" id="item-price" step="0.01" required />
             </div>
             <div class="form-group">
@@ -41,6 +50,16 @@
               <select id="item-status">
                 <option value="Available">Available</option>
                 <option value="Booked">Booked</option>
+              </select>
+            </div>
+            <div
+              class="form-group"
+              id="booked-user-group"
+              style="display: none"
+            >
+              <label for="item-booked-user">Booked For (User)</label>
+              <select id="item-booked-user">
+                <option value="">-- Select User --</option>
               </select>
             </div>
           </div>
@@ -86,6 +105,7 @@
               <th>Description</th>
               <th>Price</th>
               <th>Highest Bid</th>
+              <th>Status</th>
               <th>Visibility</th>
               <th>Bid History</th>
               <th>Actions</th>
