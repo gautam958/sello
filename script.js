@@ -71,20 +71,57 @@ function setupNavbar() {
   if (!nav) return;
 
   const user = getSessionUser();
-  let html = `<a href="index.html">Home</a>`;
+  const current = window.location.pathname.split("/").pop() || "index.html";
+  const link = (href, label, extra = "") => {
+    const classes = [extra, current === href ? "active" : ""]
+      .filter(Boolean)
+      .join(" ");
+    return `<a href="${href}"${classes ? ` class="${classes}"` : ""}>${label}</a>`;
+  };
+
+  let html = link("index.html", "Home");
 
   if (user) {
     if (user.role === "admin") {
-      html += `<a href="admin.html">Admin Items</a>`;
-      html += `<a href="users.html">Manage Users</a>`;
+      html += link("admin.html", "Admin Items");
+      html += link("users.html", "Manage Users");
     }
-    html += `<span style="margin-left: 1rem;">Welcome, ${user.username} (${user.role})</span>`;
-    html += `<button id="logout-btn" class="btn" style="background-color: var(--danger-color); margin-left: 1rem;">Logout</button>`;
+    html += `<span class="nav-user">Welcome, ${user.username} (${user.role})</span>`;
+    html += `<button id="logout-btn" class="btn nav-logout">Logout</button>`;
   } else {
-    html += `<a href="login.html">Login</a>`;
-    html += `<a href="signup.html" class="btn">Register</a>`;
+    html += link("login.html", "Login");
+    html += link("signup.html", "Register", "btn");
   }
   nav.innerHTML = html;
+
+  // Mobile hamburger toggle (injected once into the header).
+  const header = nav.closest("header") || document.querySelector("header");
+  let toggle = document.getElementById("nav-toggle");
+  if (!toggle && header) {
+    toggle = document.createElement("button");
+    toggle.id = "nav-toggle";
+    toggle.className = "nav-toggle";
+    toggle.type = "button";
+    toggle.setAttribute("aria-label", "Toggle navigation menu");
+    toggle.setAttribute("aria-controls", "nav-menu");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.innerHTML = "<span></span><span></span><span></span>";
+    header.insertBefore(toggle, nav);
+    toggle.addEventListener("click", () => {
+      const open = nav.classList.toggle("open");
+      toggle.classList.toggle("active", open);
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  }
+
+  // Close the mobile menu after navigating.
+  nav.querySelectorAll("a, button").forEach((el) =>
+    el.addEventListener("click", () => {
+      nav.classList.remove("open");
+      toggle?.classList.remove("active");
+      toggle?.setAttribute("aria-expanded", "false");
+    }),
+  );
 
   document.getElementById("logout-btn")?.addEventListener("click", () => {
     sessionStorage.removeItem("sello_user");
