@@ -114,37 +114,45 @@ async function loadMarketplaceItems() {
       })
       .join("");
 
-document.querySelectorAll(".open-bid-modal-btn").forEach((btn) => {
-  btn.addEventListener("click", (e) => {
-    const user = getSessionUser();
-    if (!user) {
-      alert(
-        "Unauthorized access layer block. Please log into an active account structure.",
-      );
-      window.location.href = "login.html";
-      return;
-    }
+    document.querySelectorAll(".open-bid-modal-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const user = getSessionUser();
+        if (!user) {
+          alert(
+            "Unauthorized access layer block. Please log into an active account structure.",
+          );
+          window.location.href = "login.html";
+          return;
+        }
 
-    // changed 'e.target' to 'e.currentTarget' to guarantee reading from the button
-    const targetBtn = e.currentTarget;
+        // changed 'e.target' to 'e.currentTarget' to guarantee reading from the button
+        const targetBtn = e.currentTarget;
 
-    currentTargetBidId = targetBtn.getAttribute("data-id");
-    const baselinePrice = parseFloat(targetBtn.getAttribute("data-price"));
-    const highestBidValue = parseFloat(targetBtn.getAttribute("data-highest"));
-    const dynamicDefaultValue =
-      highestBidValue > 0 ? highestBidValue + 1.0 : baselinePrice;
+        currentTargetBidId = targetBtn.getAttribute("data-id");
+        const baselinePrice = parseFloat(targetBtn.getAttribute("data-price"));
+        const highestBidValue = parseFloat(
+          targetBtn.getAttribute("data-highest"),
+        );
+        const dynamicDefaultValue =
+          highestBidValue > 0 ? highestBidValue + 1.0 : baselinePrice;
 
-    document.getElementById("modal-item-name")?.innerText =
-      targetBtn.getAttribute("data-name");
-    document.getElementById("modal-item-price")?.innerText =
-      `$${baselinePrice.toFixed(2)}`;
-    document.getElementById("modal-highest-bid")?.innerText =
-      highestBidValue > 0 ? `$${highestBidValue.toFixed(2)}` : "None";
-    document.getElementById("bid-amount")?.value =
-      dynamicDefaultValue.toFixed(2);
+        document.getElementById("modal-item-name")?.innerText =
+          targetBtn.getAttribute("data-name");
+        document.getElementById("modal-item-price")?.innerText =
+          `$${baselinePrice.toFixed(2)}`;
+        document.getElementById("modal-highest-bid")?.innerText =
+          highestBidValue > 0 ? `$${highestBidValue.toFixed(2)}` : "None";
+        document.getElementById("bid-amount")?.value =
+          dynamicDefaultValue.toFixed(2);
 
-    document.getElementById("bid-modal").style.display = "flex";
-  }) });
+        document.getElementById("bid-modal").style.display = "flex";
+      });
+    });
+  } catch (err) {
+    grid.innerHTML =
+      "<p>Error retrieving marketplace inventory. Please try again later.</p>";
+  }
+}
 
 // Modal interface controls
 document
@@ -177,7 +185,7 @@ document
       );
 
       const data = await res.json();
-      if (res.ok) { 
+      if (res.ok) {
         document.getElementById("bid-modal").style.display = "none";
         loadMarketplaceItems();
       } else {
