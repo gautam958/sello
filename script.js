@@ -19,6 +19,22 @@ function resolveImageSrc(image, fallback) {
   return `${ASSET_BASE_URL}/images/${filename}`;
 }
 
+// Auth header helper — sends the token stored on login for admin operations.
+function getAuthHeaders() {
+  const token = sessionStorage.getItem("sello_token");
+  return token ? { Authorization: "Bearer " + token } : {};
+}
+
+// Escape user-supplied text before injecting into HTML.
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Application state configuration initialization
 function initApp(page) {
   setupNavbar();
@@ -33,6 +49,9 @@ function initApp(page) {
     checkAdminAccess();
     loadAdminDashboard();
     initAdminStatusControls();
+  } else if (page === "users") {
+    checkAdminAccess();
+    loadAdminUsers();
   }
 }
 
@@ -57,6 +76,7 @@ function setupNavbar() {
   if (user) {
     if (user.role === "admin") {
       html += `<a href="admin.html">Admin Items</a>`;
+      html += `<a href="users.html">Manage Users</a>`;
     }
     html += `<span style="margin-left: 1rem;">Welcome, ${user.username} (${user.role})</span>`;
     html += `<button id="logout-btn" class="btn" style="background-color: var(--danger-color); margin-left: 1rem;">Logout</button>`;
@@ -68,6 +88,7 @@ function setupNavbar() {
 
   document.getElementById("logout-btn")?.addEventListener("click", () => {
     sessionStorage.removeItem("sello_user");
+    sessionStorage.removeItem("sello_token");
     window.location.href = "index.html";
   });
 }
@@ -82,7 +103,7 @@ async function loadMarketplaceItems() {
   try {
     const response = await fetch(`${API_BASE_URL}/items`);
     const items = await response.json();
-    const visibleItems = items.filter((item) => item.enabled);
+    const visibleItems = items;
 
     if (visibleItems.length === 0) {
       grid.innerHTML = "<p>No items available at the moment.</p>";
@@ -91,7 +112,7 @@ async function loadMarketplaceItems() {
 
     grid.innerHTML = visibleItems
       .map((item) => {
-        const topBidValue = getMaxBidFromArray(item.bids);
+        const topBidValue = item.highestBid || 0;
         const processingBaselinePrice =
           topBidValue > 0 ? topBidValue : item.price;
 
@@ -113,7 +134,7 @@ async function loadMarketplaceItems() {
               <div class="card-content">
                   <h3 class="card-title">${item.name}</h3>
                   <p class="card-desc">${item.description}</p>
-                  <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Bids: ${item.bids ? item.bids.length : 0}</p>
+                  <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Bids: ${item.bidsCount || 0}</p>
                   <div class="card-footer">
                       <span class="price">HK$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
                       ${
@@ -234,6 +255,7 @@ function setupLoginHandler() {
         const data = await res.json();
         if (res.ok) {
           sessionStorage.setItem("sello_user", JSON.stringify(data.user));
+          if (data.token) sessionStorage.setItem("sello_token", data.token);
           window.location.href =
             data.user.role === "admin" ? "admin.html" : "index.html";
         } else {
@@ -313,7 +335,9 @@ async function loadAdminDashboard() {
 
   const fetchAdminItems = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/items`);
+      const res = await fetch(`${API_BASE_URL}/admin/items`, {
+        headers: getAuthHeaders(),
+      });
       const items = await res.json();
 
       tableBody.innerHTML = items
@@ -393,7 +417,11 @@ async function loadAdminDashboard() {
     const method = id ? "PUT" : "POST";
 
     try {
-      const response = await fetch(url, { method, body: formData });
+      const response = await fetch(url, {
+        method,
+        body: formData,
+        headers: getAuthHeaders(),
+      });
       if (response.ok) {
         alert("Product saved successfully.");
         form.reset();
@@ -453,7 +481,9 @@ async function initAdminStatusControls() {
   if (!statusSel || !bookedGroup || !bookedUserSel) return;
 
   try {
-    const res = await fetch(`${API_BASE_URL}/users`);
+    const res = await fetch(`${API_BASE_URL}/admin/users`, {
+      headers: getAuthHeaders(),
+    });
     const users = await res.json();
     bookedUserSel.innerHTML =
       '<option value="">-- Select User --</option>' +
@@ -461,7 +491,7 @@ async function initAdminStatusControls() {
         .filter((u) => u.role !== "admin")
         .map(
           (u) =>
-            `<option value="${u.username}">${u.username} (${u.email})</option>`,
+            `<option value="${u.username}">${u.username} | ${u.email || "no email"} | ${u.mobile || "no mobile"}</option>`,
         )
         .join("");
   } catch (e) {
@@ -495,6 +525,7 @@ async function deleteItem(id, callback) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/items/${id}`, {
       method: "DELETE",
+      headers: getAuthHeaders(),
     });
     if (res.ok) {
       alert("Item deleted successfully.");
@@ -502,5 +533,186 @@ async function deleteItem(id, callback) {
     }
   } catch (err) {
     console.error(err);
+  }
+}
+
+// ─── ADMIN USER MANAGEMENT ───────────────────────────────────────
+async function loadAdminUsers() {
+  const tableBody = document.getElementById("admin-users-table");
+  if (!tableBody) return;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/users`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) return;
+    const users = await res.json();
+
+    tableBody.innerHTML = users
+      .map(
+        (u) => `
+        <tr>
+          <td>${escapeHtml(u.username)}</td>
+          <td>${u.email ? escapeHtml(u.email) : "—"}</td>
+          <td>${u.mobile ? escapeHtml(u.mobile) : "—"}</td>
+          <td>${
+            u.password
+              ? `<span class="pwd-cell" style="font-family:monospace;">
+                   <span class="pwd-dots">••••••••</span>
+                   <span class="pwd-text" style="display:none;">${escapeHtml(u.password)}</span>
+                   <button type="button" class="pwd-toggle" style="margin-left:6px;border:none;background:none;color:var(--primary-color,#4f46e5);cursor:pointer;font-size:0.75rem;">show</button>
+                 </span>`
+              : '<span style="color:#94a3b8;font-size:0.75rem;">reset to set</span>'
+          }</td>
+          <td><span class="status-badge ${
+            u.role === "admin" ? "status-booked" : "status-available"
+          }" style="position:static;width:auto;min-width:0;border-radius:2rem;font-size:0.7rem;padding:2px 10px;">${u.role}</span></td>
+          <td>${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</td>
+          <td>${u.lastLogin ? new Date(u.lastLogin).toLocaleString() : "—"}</td>
+          <td class="actions-cell">
+            <button class="btn user-edit-btn" data-username="${u.username}" style="background-color:#eab308;padding:0.25rem 0.5rem;font-size:0.8rem;">Edit</button>
+            ${u.role !== "admin" ? `<button class="btn user-del-btn" data-username="${u.username}" style="background-color:var(--danger-color);padding:0.25rem 0.5rem;font-size:0.8rem;">Delete</button>` : ""}
+          </td>
+        </tr>
+      `,
+      )
+      .join("");
+
+    document
+      .querySelectorAll(".user-edit-btn")
+      .forEach((btn) =>
+        btn.addEventListener("click", () =>
+          editUser(users, btn.getAttribute("data-username")),
+        ),
+      );
+    document
+      .querySelectorAll(".user-del-btn")
+      .forEach((btn) =>
+        btn.addEventListener("click", () =>
+          deleteUser(btn.getAttribute("data-username")),
+        ),
+      );
+    document.querySelectorAll(".pwd-toggle").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        const cell = btn.closest(".pwd-cell");
+        const dots = cell.querySelector(".pwd-dots");
+        const text = cell.querySelector(".pwd-text");
+        const showing = text.style.display !== "none";
+        text.style.display = showing ? "none" : "inline";
+        dots.style.display = showing ? "inline" : "none";
+        btn.textContent = showing ? "show" : "hide";
+      }),
+    );
+  } catch (err) {
+    console.error("Failed to load users.");
+  }
+
+  const createForm = document.getElementById("user-create-form");
+  if (createForm && !createForm.dataset.bound) {
+    createForm.dataset.bound = "1";
+    createForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        username: document.getElementById("new-user-username").value.trim(),
+        email: document.getElementById("new-user-email").value.trim(),
+        mobile: document.getElementById("new-user-mobile").value.trim(),
+        role: document.getElementById("new-user-role").value,
+        password: document.getElementById("new-user-password").value,
+      };
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/users`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          alert("User created.");
+          createForm.reset();
+          loadAdminUsers();
+        } else {
+          const data = await res.json();
+          alert(data.message || "Failed to create user.");
+        }
+      } catch (err) {
+        alert("Error creating user.");
+      }
+    });
+  }
+
+  const editForm = document.getElementById("user-edit-form");
+  const cancelBtn = document.getElementById("user-edit-cancel");
+  if (editForm && !editForm.dataset.bound) {
+    editForm.dataset.bound = "1";
+    editForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("edit-user-orig-username").value;
+      const payload = {
+        email: document.getElementById("edit-user-email").value,
+        mobile: document.getElementById("edit-user-mobile").value,
+        role: document.getElementById("edit-user-role").value,
+        password: document.getElementById("edit-user-password").value,
+      };
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/admin/users/${encodeURIComponent(username)}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              ...getAuthHeaders(),
+            },
+            body: JSON.stringify(payload),
+          },
+        );
+        if (res.ok) {
+          alert("User updated.");
+          document.getElementById("user-edit-panel").style.display = "none";
+          loadAdminUsers();
+        } else {
+          const data = await res.json();
+          alert(data.message || "Failed to update user.");
+        }
+      } catch (err) {
+        alert("Error updating user.");
+      }
+    });
+    if (cancelBtn)
+      cancelBtn.addEventListener("click", () => {
+        document.getElementById("user-edit-panel").style.display = "none";
+      });
+  }
+}
+
+function editUser(users, username) {
+  const user = users.find((u) => u.username === username);
+  if (!user) return;
+  document.getElementById("edit-user-orig-username").value = user.username;
+  document.getElementById("edit-user-username").value = user.username;
+  document.getElementById("edit-user-email").value = user.email || "";
+  document.getElementById("edit-user-mobile").value = user.mobile || "";
+  document.getElementById("edit-user-role").value = user.role;
+  document.getElementById("edit-user-password").value = "";
+  document.getElementById("user-edit-panel").style.display = "";
+  document
+    .getElementById("user-edit-panel")
+    .scrollIntoView({ behavior: "smooth" });
+}
+
+async function deleteUser(username) {
+  if (!confirm(`Delete user "${username}"?`)) return;
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/admin/users/${encodeURIComponent(username)}`,
+      { method: "DELETE", headers: getAuthHeaders() },
+    );
+    if (res.ok) {
+      alert("User deleted.");
+      loadAdminUsers();
+    } else {
+      const data = await res.json();
+      alert(data.message || "Failed to delete user.");
+    }
+  } catch (err) {
+    alert("Error deleting user.");
   }
 }
