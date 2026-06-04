@@ -144,8 +144,7 @@ document.querySelectorAll(".open-bid-modal-btn").forEach((btn) => {
       dynamicDefaultValue.toFixed(2);
 
     document.getElementById("bid-modal").style.display = "flex";
-  })
-
+  }) });
 
 // Modal interface controls
 document
