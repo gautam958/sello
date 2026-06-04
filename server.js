@@ -22,14 +22,14 @@ app.use(express.json());
 // Path Definitions - Lowercase folder matching production standard environments
 const USERS_FILE = path.join(__dirname, "users.json");
 const ITEMS_FILE = path.join(__dirname, "items.json");
-const UPLOAD_DIR = path.join(__dirname, "images");
+const UPLOAD_DIR = path.join(__dirname, "Images");
 
 // Ensure image upload directory layout space exists natively
 fs.ensureDirSync(UPLOAD_DIR);
 
-// Explicitly serve static assets out of the upload folder across the /images route web space
-app.use("/images", express.static(UPLOAD_DIR));
-
+console.log(
+  `📁 Static asset hosting configured for directory: ${UPLOAD_DIR} at route path: /Images`,
+);
 // Storage Engine Config for Multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -191,11 +191,9 @@ app.post("/api/items/book/:id", async (req, res) => {
         : target.price;
 
     if (parsedBid < currentHighestBid) {
-      return res
-        .status(400)
-        .json({
-          message: `Bid must equal or exceed current high valuation of $${currentHighestBid}`,
-        });
+      return res.status(400).json({
+        message: `Bid must equal or exceed current high valuation of $${currentHighestBid}`,
+      });
     }
 
     const newBidEntry = {
@@ -266,11 +264,9 @@ app.post("/api/admin/items", upload.single("image"), async (req, res) => {
     await writeData(ITEMS_FILE, items);
     res.status(201).json(newItem);
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        message: "Failure appending new product configuration parameters.",
-      });
+    res.status(500).json({
+      message: "Failure appending new product configuration parameters.",
+    });
   }
 });
 

@@ -304,7 +304,7 @@ async function loadAdminDashboard() {
           if (item.image) {
             adminImgSrc = item.image.startsWith("http")
               ? item.image
-              : item.image.replace("/images/", "/Images/");
+              : item.image;
           }
 
           return `
