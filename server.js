@@ -10,13 +10,26 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Configure CORS to accept requests from your production frontend site
-app.use(
-  cors({
-    origin: "https://gautam958.github.io",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true,
-  }),
-);
+// app.use(
+//   cors({
+//     origin: "https://gautam958.github.io",
+//     methods: ["GET", "POST", "PUT", "DELETE"],
+//     credentials: true,
+//   }),
+// );
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowed = ["https://gautam958.github.io", "http://localhost:3000"];
+  if (allowed.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
 
 app.use(express.json());
 
