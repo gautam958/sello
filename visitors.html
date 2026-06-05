@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sello - Visitors</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header>
+      <a href="index.html" class="logo">Sello Dashboard</a>
+      <nav id="nav-menu"></nav>
+    </header>
+
+    <div class="marquee">
+      <span
+        >All Items Pick From Tung Chung ( Coastal Skyline) Once Admin Confirm
+        The Items you will received and detailed instruction , Pickup must be
+        before 16-June-2026.</span
+      >
+    </div>
+
+    <main class="container">
+      <h2>Visitors</h2>
+      <p style="color: #64748b; margin: 0.25rem 0 1.25rem">
+        Who visited the site, where they came from, and whether they are new or
+        returning. Location is derived from IP (city / country) via ipapi.co.
+      </p>
+
+      <!-- KPI cards -->
+      <div
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 0.75rem;
+          margin-bottom: 1.25rem;
+        "
+      >
+        <div class="kpi-card">
+          <div class="kpi-label">Total visitors</div>
+          <div class="kpi-value" id="kpi-total">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">New today</div>
+          <div class="kpi-value" id="kpi-new-today" style="color: #22c55e">
+            0
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Returning</div>
+          <div class="kpi-value" id="kpi-returning" style="color: #0ea5e9">
+            0
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Active (5 min)</div>
+          <div class="kpi-value" id="kpi-active" style="color: #f97316">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Countries</div>
+          <div class="kpi-value" id="kpi-countries">0</div>
+        </div>
+      </div>
+
+      <div
+        class="logs-toolbar"
+        style="
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 0.75rem;
+          margin-bottom: 1rem;
+        "
+      >
+        <div class="form-group" style="margin: 0">
+          <label for="visitor-type-filter" style="font-size: 0.8rem"
+            >Type</label
+          >
+          <select id="visitor-type-filter">
+            <option value="">All visitors</option>
+            <option value="new">New only</option>
+            <option value="returning">Returning only</option>
+            <option value="loggedin">Logged-in only</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin: 0">
+          <label for="visitor-country-filter" style="font-size: 0.8rem"
+            >Country</label
+          >
+          <select id="visitor-country-filter">
+            <option value="">All countries</option>
+          </select>
+        </div>
+        <button type="button" class="btn" id="visitor-refresh-btn">
+          Refresh
+        </button>
+        <button
+          type="button"
+          class="btn"
+          id="visitor-clear-btn"
+          style="background-color: var(--danger)"
+        >
+          Clear
+        </button>
+      </div>
+
+      <div style="overflow-x: auto">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Last seen</th>
+              <th>Status</th>
+              <th>User</th>
+              <th>Location</th>
+              <th>Device · Browser · OS</th>
+              <th>Last page</th>
+              <th>Referrer</th>
+              <th title="page views / visits">Views / Visits</th>
+            </tr>
+          </thead>
+          <tbody id="admin-visitors-table"></tbody>
+        </table>
+      </div>
+    </main>
+
+    <style>
+      .kpi-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 0.85rem 1rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+      .kpi-label {
+        color: #64748b;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.25rem;
+      }
+      .kpi-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1;
+      }
+    </style>
+
+    <script src="script.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        initApp("visitors");
+      });
+    </script>
+  </body>
+</html>

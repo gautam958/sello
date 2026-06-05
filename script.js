@@ -38,6 +38,7 @@ function escapeHtml(str) {
 // Application state configuration initialization
 function initApp(page) {
   setupNavbar();
+  trackVisit();
 
   if (page === "market") {
     loadMarketplaceItems();
@@ -55,6 +56,38 @@ function initApp(page) {
   } else if (page === "logs") {
     checkAdminAccess();
     loadAdminLogs();
+  } else if (page === "visitors") {
+    checkAdminAccess();
+    loadAdminVisitors();
+  }
+}
+
+// Fire-and-forget page view ping to the analytics endpoint. A stable visitor
+// id is kept in localStorage so the server can distinguish new vs returning.
+function trackVisit() {
+  try {
+    let vid = localStorage.getItem("sello_vid");
+    if (!vid) {
+      vid =
+        (crypto?.randomUUID?.() ||
+          Date.now().toString(36) + Math.random().toString(36).slice(2)) + "";
+      localStorage.setItem("sello_vid", vid);
+    }
+    fetch(`${API_BASE_URL}/track`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({
+        visitorId: vid,
+        path: location.pathname + location.search,
+        referrer: document.referrer || "",
+      }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch (e) {
+    /* analytics must never break the page */
   }
 }
 
@@ -89,6 +122,7 @@ function setupNavbar() {
       html += link("admin.html", "Admin Items");
       html += link("users.html", "Manage Users");
       html += link("logs.html", "Logs");
+      html += link("visitors.html", "Visitors");
     }
     html += `<span class="nav-user">Welcome, ${user.username} (${user.role})</span>`;
     html += `<button id="logout-btn" class="btn nav-logout">Logout</button>`;
@@ -855,4 +889,136 @@ async function loadAdminLogs() {
       }
     });
   }
+}
+
+// ─── Admin: Visitors dashboard ─────────────────────────────────
+async function loadAdminVisitors() {
+  const tbody = document.getElementById("admin-visitors-table");
+  if (!tbody) return;
+
+  const kpiTotal = document.getElementById("kpi-total");
+  const kpiNewToday = document.getElementById("kpi-new-today");
+  const kpiReturning = document.getElementById("kpi-returning");
+  const kpiActive = document.getElementById("kpi-active");
+  const kpiCountries = document.getElementById("kpi-countries");
+  const filterCountry = document.getElementById("visitor-country-filter");
+  const filterType = document.getElementById("visitor-type-filter");
+  const refreshBtn = document.getElementById("visitor-refresh-btn");
+  const clearBtn = document.getElementById("visitor-clear-btn");
+
+  let cache = [];
+
+  const render = () => {
+    const country = filterCountry?.value || "";
+    const type = filterType?.value || "";
+    const startToday = new Date();
+    startToday.setHours(0, 0, 0, 0);
+    const ACTIVE_MS = 5 * 60 * 1000;
+    const now = Date.now();
+
+    const total = cache.length;
+    const newToday = cache.filter(
+      (v) => new Date(v.firstSeen) >= startToday,
+    ).length;
+    const returning = cache.filter((v) => (v.visitCount || 1) > 1).length;
+    const active = cache.filter(
+      (v) => now - new Date(v.lastSeen).getTime() <= ACTIVE_MS,
+    ).length;
+    const countries = new Set(cache.map((v) => v.country).filter(Boolean));
+
+    if (kpiTotal) kpiTotal.textContent = total;
+    if (kpiNewToday) kpiNewToday.textContent = newToday;
+    if (kpiReturning) kpiReturning.textContent = returning;
+    if (kpiActive) kpiActive.textContent = active;
+    if (kpiCountries) kpiCountries.textContent = countries.size;
+
+    // Populate country filter once.
+    if (filterCountry && !filterCountry.dataset.filled) {
+      const opts = ['<option value="">All countries</option>'].concat(
+        [...countries]
+          .sort()
+          .map(
+            (c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`,
+          ),
+      );
+      filterCountry.innerHTML = opts.join("");
+      filterCountry.dataset.filled = "1";
+    }
+
+    let rows = cache;
+    if (country) rows = rows.filter((v) => v.country === country);
+    if (type === "new") rows = rows.filter((v) => (v.visitCount || 1) === 1);
+    if (type === "returning")
+      rows = rows.filter((v) => (v.visitCount || 1) > 1);
+    if (type === "loggedin") rows = rows.filter((v) => v.user);
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#94a3b8;">No visitors match these filters.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows
+      .map((v) => {
+        const isReturning = (v.visitCount || 1) > 1;
+        const badge = isReturning
+          ? '<span style="background:#0ea5e9;color:#fff;border-radius:2rem;font-size:0.7rem;font-weight:600;padding:2px 10px;">RETURNING</span>'
+          : '<span style="background:#22c55e;color:#fff;border-radius:2rem;font-size:0.7rem;font-weight:600;padding:2px 10px;">NEW</span>';
+        const loc =
+          [v.city, v.region, v.country].filter(Boolean).join(", ") || "—";
+        return `
+          <tr>
+            <td style="white-space:nowrap;font-size:0.8rem;color:#475569;">${new Date(v.lastSeen).toLocaleString()}</td>
+            <td>${badge}</td>
+            <td>${v.user ? escapeHtml(v.user) : '<span style="color:#94a3b8;">anonymous</span>'}</td>
+            <td>${escapeHtml(loc)}</td>
+            <td style="font-size:0.8rem;">${escapeHtml(v.device || "")} · ${escapeHtml(v.browser || "")} · ${escapeHtml(v.os || "")}</td>
+            <td style="font-size:0.8rem;">${escapeHtml(v.lastPath || "")}</td>
+            <td style="font-size:0.8rem;color:#64748b;">${escapeHtml(v.referrer || "—")}</td>
+            <td style="text-align:center;font-weight:600;">${v.pageViews || 1} <span style="color:#94a3b8;font-weight:400;">/ ${v.visitCount || 1}</span></td>
+          </tr>
+        `;
+      })
+      .join("");
+  };
+
+  const fetchAndRender = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/visitors`, {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#ef4444;">Unable to load visitors (${res.status}).</td></tr>`;
+        return;
+      }
+      cache = await res.json();
+      // Reset country filter so it repopulates with fresh data.
+      if (filterCountry) delete filterCountry.dataset.filled;
+      render();
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#ef4444;">Error loading visitors.</td></tr>`;
+    }
+  };
+
+  await fetchAndRender();
+
+  filterCountry?.addEventListener("change", render);
+  filterType?.addEventListener("change", render);
+  refreshBtn?.addEventListener("click", fetchAndRender);
+  clearBtn?.addEventListener("click", async () => {
+    if (!confirm("Clear all visitor records? This cannot be undone.")) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/visitors`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        cache = [];
+        render();
+      } else {
+        alert("Failed to clear visitors.");
+      }
+    } catch {
+      alert("Error clearing visitors.");
+    }
+  });
 }

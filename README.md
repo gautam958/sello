@@ -57,6 +57,15 @@ Pages) talking to a Node API (Azure Web App).
   admin only) to create, edit (email/mobile/role/password), and delete users, including a
   password column with a show/hide toggle. The booked-user dropdown identifies users as
   `username | email | mobile`.
+- **Visitor analytics** — a dedicated **Visitors** page (`visitors.html`, top-menu link,
+  admin only) tracks who visited the site. Every page load pings `POST /api/track` with a
+  stable anonymous visitor id stored in `localStorage` (`sello_vid`). The server resolves the
+  request IP to **city / country / timezone** via [ipapi.co](https://ipapi.co) (cached 24h
+  in-memory to stay under free-tier limits), hashes the IP with SHA-256 for privacy, and
+  links the visit to the logged-in username when available. The admin dashboard shows KPI
+  cards (Total, New Today, Returning, Active, Countries) and a filterable table with
+  location, device/UA, referrer, visited path, first/last seen, and visit count. Records are
+  capped at the newest 5,000 in `visitors.json`; admins can clear the log.
 - **Activity logging** — a dedicated **Logs** page (`logs.html`, top-menu link, admin only)
   shows an append-only audit trail so the admin can review user behaviour and spot potential
   bugs. The server records `signup`, `login`, `login_failed`, `bid`, `booking`, user changes,
@@ -129,10 +138,12 @@ sello/
 ├── admin.html         # Admin dashboard (product CRUD + status/booking)
 ├── users.html         # Admin User Management page (CRUD + viewable passwords)
 ├── logs.html          # Admin Activity Logs page (audit trail viewer)
+├── visitors.html      # Admin Visitor Analytics page (geo + KPI dashboard)
 ├── favicon.svg        # App icon (sell / price-tag), linked from every page
 ├── items.json         # Seed/persisted product data
 ├── users.json         # Seed/persisted user accounts
 ├── logs.json          # Append-only activity log (auto-created, capped at 1000)
+├── visitors.json      # Visitor records (auto-created, capped at 5000)
 ├── Images/            # Uploaded / seed product images
 ├── package.json       # Dependencies and `npm start` script
 └── .github/workflows/ # Azure (API) + GitHub Pages (frontend) deployments
@@ -145,7 +156,8 @@ sello/
 
 ### Prerequisites
 
-- Node.js (the Azure workflow targets Node `24.x`; any modern LTS works locally)
+- Node.js **18+** required (the visitor geo lookup uses the global `fetch` API). The Azure
+  workflow targets Node `24.x`; any modern LTS works locally.
 - npm
 
 ### Install & run
@@ -279,6 +291,9 @@ Base path: `/api`
 | `DELETE` | `/api/admin/items/:id`       | admin | —                                                                | Delete a product + its image.                                                                          |
 | `GET`    | `/api/admin/logs`            | admin | `?type=&limit=` (query, optional)                                | List activity logs newest-first; optional filter by `type` and cap by `limit`.                         |
 | `DELETE` | `/api/admin/logs`            | admin | —                                                                | Clear all activity logs.                                                                               |
+| `POST`   | `/api/track`                 | none  | `{ visitorId, path, referrer }`                                  | Record a visit; server adds hashed IP, geo (city/country), UA, and links to logged-in user if any.     |
+| `GET`    | `/api/admin/visitors`        | admin | —                                                                | List visitor records newest-first with location, device, path history, and visit counts.               |
+| `DELETE` | `/api/admin/visitors`        | admin | —                                                                | Clear all visitor records.                                                                             |
 
 Admin routes (`admin` in the table) are verified **server-side**: the request must carry a
 valid `Authorization: Bearer <token>` whose payload has `role === "admin"`. Missing/invalid
@@ -295,17 +310,20 @@ curl -X POST http://localhost:3000/api/items/book/1 \
 
 ## Frontend Pages
 
-| Page          | Purpose                                                                                   |
-| ------------- | ----------------------------------------------------------------------------------------- |
-| `index.html`  | Marketplace grid; opens the bid modal (login required to bid).                            |
-| `login.html`  | Sign in; admins are redirected to `admin.html`, users to `index.html`.                    |
-| `signup.html` | Register a new account (mobile number + client-side password confirmation).               |
-| `admin.html`  | Product CRUD, image upload, visibility toggle, bid history, and status/booking.           |
-| `users.html`  | **Manage Users** (admin only): create/edit/delete users + viewable passwords (show/hide). |
-| `logs.html`   | **Logs** (admin only): activity audit trail with type filter, refresh, and clear.         |
+| Page            | Purpose                                                                                   |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| `index.html`    | Marketplace grid; opens the bid modal (login required to bid).                            |
+| `login.html`    | Sign in; admins are redirected to `admin.html`, users to `index.html`.                    |
+| `signup.html`   | Register a new account (mobile number + client-side password confirmation).               |
+| `admin.html`    | Product CRUD, image upload, visibility toggle, bid history, and status/booking.           |
+| `users.html`    | **Manage Users** (admin only): create/edit/delete users + viewable passwords (show/hide). |
+| `logs.html`     | **Logs** (admin only): activity audit trail with type filter, refresh, and clear.         |
+| `visitors.html` | **Visitors** (admin only): visitor analytics with KPI cards, geo, and device breakdown.   |
 
 Each page calls `initApp("<page>")`, which wires up the navbar and the page-specific logic in
-`script.js`. The **Manage Users** and **Logs** links appear in the top menu only for admins.
+`script.js`. The **Manage Users**, **Logs**, and **Visitors** links appear in the top menu
+only for admins. Every public page also fires a one-shot `trackVisit()` ping so the Visitors
+dashboard stays up to date.
 
 ## Deployment
 

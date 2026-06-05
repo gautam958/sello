@@ -24,6 +24,7 @@ app.use(express.json());
 const USERS_FILE = path.join(__dirname, "users.json");
 const ITEMS_FILE = path.join(__dirname, "items.json");
 const LOGS_FILE = path.join(__dirname, "logs.json");
+const VISITORS_FILE = path.join(__dirname, "visitors.json");
 const UPLOAD_DIR = path.join(__dirname, "images");
 
 // Ensure image upload directory layout space exists natively
@@ -36,7 +37,7 @@ app.use("/images", express.static(UPLOAD_DIR));
 // one origin in local development. Block data and server files from being downloaded.
 app.use((req, res, next) => {
   if (
-    /(server\.js|users\.json|items\.json|logs\.json|package(-lock)?\.json)$/.test(
+    /(server\.js|users\.json|items\.json|logs\.json|visitors\.json|package(-lock)?\.json)$/.test(
       req.path,
     )
   ) {
@@ -864,6 +865,208 @@ app.delete("/api/admin/items/:id", requireAdmin, async (req, res) => {
       details: `DELETE /api/admin/items/${id}`,
     });
     res.status(500).json({ message: "Drop tracking mapping indices fault." });
+  }
+});
+
+// ─── Visitor analytics ──────────────────────────────────────────
+// Lightweight, no-database visitor tracking. The client sends a stable
+// `visitorId` (generated and persisted in localStorage) on every page load.
+// The server looks up the visitor's approximate location from their IP using
+// ipapi.co (free, no key), caches it for 24h, and appends/updates a record
+// in visitors.json. IPs are stored as a SHA-256 hash, never in plain form.
+
+const GEO_CACHE = new Map(); // ip -> { geo, ts }
+const GEO_TTL_MS = 24 * 60 * 60 * 1000;
+
+const hashIp = (ip) =>
+  crypto
+    .createHash("sha256")
+    .update(String(ip || ""))
+    .digest("hex")
+    .slice(0, 16);
+
+const getClientIp = (req) => {
+  const xff = (req.headers["x-forwarded-for"] || "").toString();
+  return (xff.split(",")[0] || req.ip || "").trim().replace(/^::ffff:/, "");
+};
+
+const isPrivateIp = (ip) =>
+  !ip ||
+  ip === "127.0.0.1" ||
+  ip === "::1" ||
+  /^10\./.test(ip) ||
+  /^192\.168\./.test(ip) ||
+  /^172\.(1[6-9]|2\d|3[01])\./.test(ip);
+
+const lookupGeo = async (ip) => {
+  if (isPrivateIp(ip))
+    return { country: "", city: "", region: "", timezone: "" };
+  const cached = GEO_CACHE.get(ip);
+  if (cached && Date.now() - cached.ts < GEO_TTL_MS) return cached.geo;
+  try {
+    const resp = await fetch(
+      `https://ipapi.co/${encodeURIComponent(ip)}/json/`,
+      {
+        headers: { "User-Agent": "sello-visitor-tracker/1.0" },
+      },
+    );
+    if (!resp.ok) throw new Error(`ipapi ${resp.status}`);
+    const data = await resp.json();
+    const geo = {
+      country: data.country_name || data.country || "",
+      countryCode: data.country_code || "",
+      city: data.city || "",
+      region: data.region || "",
+      timezone: data.timezone || "",
+    };
+    GEO_CACHE.set(ip, { geo, ts: Date.now() });
+    return geo;
+  } catch (e) {
+    return { country: "", city: "", region: "", timezone: "" };
+  }
+};
+
+const parseUA = (ua = "") => {
+  const s = String(ua);
+  let browser = "Other";
+  if (/Edg\//.test(s)) browser = "Edge";
+  else if (/OPR\//.test(s)) browser = "Opera";
+  else if (/Chrome\//.test(s)) browser = "Chrome";
+  else if (/Safari\//.test(s) && !/Chrome\//.test(s)) browser = "Safari";
+  else if (/Firefox\//.test(s)) browser = "Firefox";
+  let os = "Other";
+  if (/Windows/.test(s)) os = "Windows";
+  else if (/Android/.test(s)) os = "Android";
+  else if (/iPhone|iPad|iOS/.test(s)) os = "iOS";
+  else if (/Mac OS X/.test(s)) os = "macOS";
+  else if (/Linux/.test(s)) os = "Linux";
+  const device = /Mobi|Android|iPhone/.test(s)
+    ? "Mobile"
+    : /iPad|Tablet/.test(s)
+      ? "Tablet"
+      : "Desktop";
+  return { browser, os, device };
+};
+
+// PUBLIC: record a page visit. Called by the frontend on every page load.
+// Body: { visitorId, path, referrer }
+app.post("/api/track", async (req, res) => {
+  try {
+    const { visitorId, path: visitedPath, referrer } = req.body || {};
+    if (!visitorId || typeof visitorId !== "string" || visitorId.length > 64) {
+      return res.status(400).json({ message: "Invalid visitorId." });
+    }
+
+    const ip = getClientIp(req);
+    const ipHash = hashIp(ip);
+    const ua = req.headers["user-agent"] || "";
+    const { browser, os, device } = parseUA(ua);
+    const now = new Date().toISOString();
+
+    // Link to a logged-in user if a valid token is present.
+    let authedUser = "";
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+    const payload = token ? verifyToken(token) : null;
+    if (payload && payload.username) authedUser = payload.username;
+
+    let visitors = [];
+    try {
+      visitors = await readData(VISITORS_FILE);
+      if (!Array.isArray(visitors)) visitors = [];
+    } catch {
+      visitors = [];
+    }
+
+    const idx = visitors.findIndex((v) => v.visitorId === visitorId);
+    const SESSION_GAP_MS = 30 * 60 * 1000;
+
+    if (idx === -1) {
+      // New visitor — look up geo (only on first sight, cached after).
+      const geo = await lookupGeo(ip);
+      visitors.push({
+        visitorId,
+        firstSeen: now,
+        lastSeen: now,
+        pageViews: 1,
+        visitCount: 1,
+        lastPath: visitedPath || "",
+        landingPath: visitedPath || "",
+        referrer: referrer || "",
+        user: authedUser || "",
+        ipHash,
+        browser,
+        os,
+        device,
+        userAgent: ua.slice(0, 240),
+        country: geo.country,
+        countryCode: geo.countryCode,
+        city: geo.city,
+        region: geo.region,
+        timezone: geo.timezone,
+        isNew: true,
+      });
+    } else {
+      const v = visitors[idx];
+      const gap = Date.now() - new Date(v.lastSeen).getTime();
+      v.lastSeen = now;
+      v.pageViews = (v.pageViews || 0) + 1;
+      if (gap > SESSION_GAP_MS) v.visitCount = (v.visitCount || 1) + 1;
+      v.lastPath = visitedPath || v.lastPath;
+      if (authedUser && !v.user) v.user = authedUser;
+      v.browser = browser;
+      v.os = os;
+      v.device = device;
+      v.ipHash = ipHash;
+      v.isNew = false;
+      // Backfill geo if we missed it the first time.
+      if (!v.country) {
+        const geo = await lookupGeo(ip);
+        v.country = geo.country;
+        v.countryCode = geo.countryCode;
+        v.city = geo.city;
+        v.region = geo.region;
+        v.timezone = geo.timezone;
+      }
+    }
+
+    // Cap stored visitors at 5000 (drop oldest by firstSeen).
+    if (visitors.length > 5000) {
+      visitors.sort((a, b) => new Date(a.firstSeen) - new Date(b.firstSeen));
+      visitors = visitors.slice(-5000);
+    }
+
+    await writeData(VISITORS_FILE, visitors);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ message: "Track failed." });
+  }
+});
+
+// ADMIN: list all visitors (newest activity first).
+app.get("/api/admin/visitors", requireAdmin, async (req, res) => {
+  try {
+    let visitors = [];
+    try {
+      visitors = await readData(VISITORS_FILE);
+      if (!Array.isArray(visitors)) visitors = [];
+    } catch {
+      visitors = [];
+    }
+    visitors.sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen));
+    res.json(visitors);
+  } catch (err) {
+    res.status(500).json({ message: "Unable to read visitor records." });
+  }
+});
+
+// ADMIN: clear all visitors.
+app.delete("/api/admin/visitors", requireAdmin, async (req, res) => {
+  try {
+    await writeData(VISITORS_FILE, []);
+    res.json({ message: "Visitors cleared." });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to clear visitors." });
   }
 });
 
