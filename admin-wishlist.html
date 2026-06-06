@@ -88,7 +88,7 @@
 
         <div class="form-group">
           <label for="contact-message">Message</label>
-          <textarea id="contact-message" rows="5" placeholder="Hi! We noticed you're interested in this item. Feel free to reach out if you have any questions!"></textarea>
+          <textarea id="contact-message" rows="5" placeholder="Enter your message..."></textarea>
         </div>
 
         <div style="display: flex; gap: 1rem; justify-content: center;">
@@ -133,12 +133,29 @@
         initApp("admin-wishlist");
       });
 
-      function openContactModal(wishlistId, itemName, userName, email, mobile) {
+      function openContactModal(wishlistId, itemName, userName, email, mobile, itemPrice, itemStatus) {
         currentWishlistId = wishlistId;
         document.getElementById("modal-item-name").textContent = itemName;
         document.getElementById("modal-user-name").textContent = userName;
         document.getElementById("modal-user-email").textContent = email;
         document.getElementById("modal-user-mobile").textContent = mobile || "—";
+
+        // Pre-fill message
+        const message = `Hi ${userName},
+
+You have "${itemName}" on your wishlist from Sello.
+
+📦 Item Details:
+   • Current Price: HK$ ${itemPrice}
+   • Status: ${itemStatus || "Available"}
+   • Pickup Location: Coastal Skyline, Tung Chung
+
+Feel free to reach out if you have any questions!
+
+Best regards,
+Sello Team`;
+
+        document.getElementById("contact-message").value = message;
         document.getElementById("contact-modal").style.display = "flex";
       }
 
@@ -233,7 +250,7 @@
               <td style="font-size:0.85rem;color:#64748b;">${new Date(w.addedAt).toLocaleString()}</td>
               <td>
                 <div class="actions-cell">
-                  <button class="btn contact-btn" onclick="openContactModal('${w.id}', '${escapeHtml(w.itemName)}', '${escapeHtml(w.userId)}', '${escapeHtml(w.userEmail)}', '${escapeHtml(w.userMobile || "")}')">📧 Contact</button>
+                  <button class="btn contact-btn" onclick="openContactModal('${w.id}', '${escapeHtml(w.itemName)}', '${escapeHtml(w.userId)}', '${escapeHtml(w.userEmail)}', '${escapeHtml(w.userMobile || "")}', '${w.itemPrice}', '${w.itemStatus || "Available"}')">📧 Contact</button>
                   <button class="btn" style="background-color:#ef4444;padding:0.4rem 0.8rem;font-size:0.85rem;" onclick="deleteWishlist('${w.id}')">Delete</button>
                 </div>
               </td>

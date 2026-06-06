@@ -157,15 +157,17 @@ async function loadUserWishlistPage() {
 const SALE_END_DATE = new Date("2026-06-15T23:59:59");
 
 function startCountdown() {
-  const el = document.getElementById("marquee-countdown");
-  if (!el) return;
+  const startEl = document.getElementById("marquee-countdown");
+  const endEl = document.getElementById("marquee-countdown-end");
+  if (!startEl || !endEl) return;
 
   function update() {
     const now = new Date();
     const diff = SALE_END_DATE - now;
 
     if (diff <= 0) {
-      el.textContent = "🚚 Sale has ended! Pickup remaining items by June 16.";
+      startEl.textContent = "🚚 Sale has ended! Pickup remaining items by June 16.";
+      endEl.textContent = "";
       return;
     }
 
@@ -175,10 +177,11 @@ function startCountdown() {
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
     const countdown = days > 0
-      ? `⏰ Sale ends in ${days}d ${hours}h ${minutes}m ${seconds}s — Pickup from Coastal Skyline, Tung Chung — Book your items now!`
-      : `⏰ Sale ends in ${hours}h ${minutes}m ${seconds}s — Pickup from Coastal Skyline, Tung Chung — Book your items now!`;
+      ? `⏰ Sale ends in ${days}d ${hours}h ${minutes}m ${seconds}s —`
+      : `⏰ Sale ends in ${hours}h ${minutes}m ${seconds}s —`;
 
-    el.textContent = countdown;
+    startEl.textContent = countdown;
+    endEl.textContent = countdown;
   }
 
   update();
