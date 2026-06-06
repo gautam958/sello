@@ -554,8 +554,12 @@ const notifyBooking = async (item, bookedUser) => {
     <p><strong>Product:</strong> ${item.name}</p>
     <p><strong>Price:</strong> HK$${parseFloat(item.price).toFixed(2)}</p>
     <p><strong>Booked For:</strong> ${bookedUser}</p>
-    <p>Pickup is from Tung Chung (Coastal Skyline). Detailed instructions will follow.
-       Pickup must be before 16-June-2026. please whatsapp/call to 53451910</p>
+    <p>Pickup is from Tung Chung (Coastal Skyline, La Rossa B). 
+       Detailed instructions will follow.
+       Pickup must be before 16-June-2026, Please bring enough cash in your hand, 
+       Please confirm this email/whatsapp/facebook in next 2-4 hours otherwise this booking will be cancelled and open for others.
+       please also include your preferred pickup time in your reply, so we can arrange the schedule.  
+       Please call at whatsapp/call to +852 53451910 for any help</p>
   `;
   sendMail({
     to: OWNER_EMAIL,

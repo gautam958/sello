@@ -1,5 +1,36 @@
-node_modules
 users.json
 items.json
 logs.json
 visitors.json
+# Dependencies
+node_modules/
+jspm_packages/
+.pnpm-store/
+
+# Environment variables and secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env.json
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Frontend Build outputs (if using build tools/bundlers like Vite, Webpack, Dist)
+dist/
+build/
+.cache/
+.parcel-cache/
+
+# Editor and System files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
