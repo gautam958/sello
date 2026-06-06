@@ -906,8 +906,45 @@ const hashIp = (ip) =>
     .slice(0, 16);
 
 const getClientIp = (req) => {
-  const xff = (req.headers["x-forwarded-for"] || "").toString();
-  return (xff.split(",")[0] || req.ip || "").trim().replace(/^::ffff:/, "");
+  // Check various headers that proxies/CDNs/load balancers set
+  const headers = [
+    req.headers["x-client-ip"],
+    req.headers["x-forwarded-for"],
+    req.headers["x-real-ip"],
+    req.headers["cf-connecting-ip"], // Cloudflare
+    req.headers["x-azure-clientip"], // Azure App Service
+    req.ip,
+  ];
+  
+  for (const h of headers) {
+    if (h) {
+      const ip = String(h).split(",")[0].trim().replace(/^::ffff:/, "");
+      if (ip && ip !== "127.0.0.1" && ip !== "::1") {
+        return ip;
+      }
+    }
+  }
+  return req.ip || "";
+};
+
+// Fallback external IP service when behind proxy
+const fetchExternalIp = async () => {
+  const services = [
+    "https://api.ipify.org",
+    "https://icanhazip.com",
+    "https://checkip.amazonaws.com",
+  ];
+  for (const url of services) {
+    try {
+      const resp = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      if (resp.ok) {
+        const text = await resp.text();
+        const ip = text.trim().replace(/^::ffff:/, "");
+        if (ip && !isPrivateIp(ip)) return ip;
+      }
+    } catch {}
+  }
+  return "";
 };
 
 const isPrivateIp = (ip) =>
@@ -919,8 +956,11 @@ const isPrivateIp = (ip) =>
   /^172\.(1[6-9]|2\d|3[01])\./.test(ip);
 
 const lookupGeo = async (ip) => {
-  if (isPrivateIp(ip))
-    return { country: "", city: "", region: "", timezone: "" };
+  // If IP is private, try to get external IP as fallback
+  if (isPrivateIp(ip)) {
+    ip = await fetchExternalIp();
+    if (!ip) return { country: "", city: "", region: "", timezone: "" };
+  }
   const cached = GEO_CACHE.get(ip);
   if (cached && Date.now() - cached.ts < GEO_TTL_MS) return cached.geo;
   try {
@@ -969,10 +1009,10 @@ const parseUA = (ua = "") => {
 };
 
 // PUBLIC: record a page visit. Called by the frontend on every page load.
-// Body: { visitorId, path, referrer }
+// Body: { visitorId, path, referrer, computerName }
 app.post("/api/track", async (req, res) => {
   try {
-    const { visitorId, path: visitedPath, referrer } = req.body || {};
+    const { visitorId, path: visitedPath, referrer, computerName } = req.body || {};
     if (!visitorId || typeof visitorId !== "string" || visitorId.length > 64) {
       return res.status(400).json({ message: "Invalid visitorId." });
     }
@@ -1024,6 +1064,7 @@ app.post("/api/track", async (req, res) => {
         city: geo.city,
         region: geo.region,
         timezone: geo.timezone,
+        computerName: computerName || "",
         isNew: true,
       });
     } else {
@@ -1039,6 +1080,7 @@ app.post("/api/track", async (req, res) => {
       v.device = device;
       v.ipHash = ipHash;
       v.isNew = false;
+      if (computerName) v.computerName = computerName;
       // Backfill geo if we missed it the first time.
       if (!v.country) {
         const geo = await lookupGeo(ip);

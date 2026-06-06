@@ -73,6 +73,26 @@ function trackVisit() {
           Date.now().toString(36) + Math.random().toString(36).slice(2)) + "";
       localStorage.setItem("sello_vid", vid);
     }
+    
+    // Computer name is not reliably available in browsers for privacy reasons.
+    // This field will typically be empty unless the user is on a local network
+    // where hostname can be detected via WebRTC.
+    let computerName = "";
+    if (typeof RTCPeerConnection !== "undefined") {
+      try {
+        const pc = new RTCPeerConnection({ iceServers: [] });
+        pc.createDataChannel("");
+        pc.onicecandidate = (e) => {
+          if (e.candidate) {
+            const match = /candidate:.* cname:(.*?) /.exec(e.candidate.candidate);
+            if (match) computerName = match[1].substring(0, 64);
+          }
+        };
+        pc.createOffer().then(offer => pc.setLocalDescription(offer));
+        setTimeout(() => { try { pc.close(); } catch {} }, 1000);
+      } catch {}
+    }
+    
     fetch(`${API_BASE_URL}/track`, {
       method: "POST",
       headers: {
@@ -83,6 +103,7 @@ function trackVisit() {
         visitorId: vid,
         path: location.pathname + location.search,
         referrer: document.referrer || "",
+        computerName,
       }),
       keepalive: true,
     }).catch(() => {});
@@ -1028,7 +1049,7 @@ async function loadAdminVisitors() {
     if (type === "loggedin") rows = rows.filter((v) => v.user);
 
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#94a3b8;">No visitors match these filters.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#94a3b8;">No visitors match these filters.</td></tr>`;
       return;
     }
 
@@ -1040,6 +1061,9 @@ async function loadAdminVisitors() {
           : '<span style="background:#22c55e;color:#fff;border-radius:2rem;font-size:0.7rem;font-weight:600;padding:2px 10px;">NEW</span>';
         const loc =
           [v.city, v.region, v.country].filter(Boolean).join(", ") || "—";
+        const computerDisplay = v.computerName 
+          ? escapeHtml(v.computerName) 
+          : '<span style="color:#94a3b8;">—</span>';
         return `
           <tr>
             <td style="white-space:nowrap;font-size:0.8rem;color:#475569;">${new Date(v.lastSeen).toLocaleString()}</td>
@@ -1047,6 +1071,7 @@ async function loadAdminVisitors() {
             <td>${v.user ? escapeHtml(v.user) : '<span style="color:#94a3b8;">anonymous</span>'}</td>
             <td>${escapeHtml(loc)}</td>
             <td style="font-size:0.8rem;">${escapeHtml(v.device || "")} · ${escapeHtml(v.browser || "")} · ${escapeHtml(v.os || "")}</td>
+            <td style="font-size:0.8rem;">${computerDisplay}</td>
             <td style="font-size:0.8rem;">${escapeHtml(v.lastPath || "")}</td>
             <td style="font-size:0.8rem;color:#64748b;">${escapeHtml(v.referrer || "—")}</td>
             <td style="text-align:center;font-weight:600;">${v.pageViews || 1} <span style="color:#94a3b8;font-weight:400;">/ ${v.visitCount || 1}</span></td>
@@ -1062,7 +1087,7 @@ async function loadAdminVisitors() {
         headers: getAuthHeaders(),
       });
       if (!res.ok) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#ef4444;">Unable to load visitors (${res.status}).</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#ef4444;">Unable to load visitors (${res.status}).</td></tr>`;
         return;
       }
       cache = await res.json();
@@ -1070,7 +1095,7 @@ async function loadAdminVisitors() {
       if (filterCountry) delete filterCountry.dataset.filled;
       render();
     } catch (err) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#ef4444;">Error loading visitors.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#ef4444;">Error loading visitors.</td></tr>`;
     }
   };
 
