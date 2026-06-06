@@ -56,7 +56,9 @@
       <div class="live-activity-header">
         <span class="live-dot"></span>
         <span class="live-label">LIVE BIDS</span>
-        <button id="live-panel-toggle" class="live-toggle" title="Toggle panel">▼</button>
+        <button id="live-panel-toggle" class="live-toggle" title="Toggle panel">
+          ▼
+        </button>
       </div>
       <div id="live-bids-container" class="live-bids-container">
         <div class="live-empty">No bids yet</div>
@@ -80,6 +82,10 @@
         <div class="form-group">
           <label for="bid-amount">Your Bid Amount (HK$)</label>
           <input type="number" id="bid-amount" step="0.01" min="0" required />
+          <small class="form-note"
+            >Higher bid price will increase the chance to win the item, so feel
+            free to place your best offer!</small
+          >
         </div>
         <div style="display: flex; gap: 1rem; justify-content: center">
           <button id="modal-submit-btn" class="btn">Place Bid</button>
