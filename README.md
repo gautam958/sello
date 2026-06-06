@@ -87,8 +87,21 @@ Pages) talking to a Node API (Azure Web App).
   - **Login** → notifies the owner (`OWNER_EMAIL`).
   - **New bid** → high-priority email to the owner **and** a separate confirmation to the bidder.
   - **Booking** → confirmation to the booked user **and** the owner.
-- **Scrolling marquee** — a pickup-instructions banner sits directly below the navigation on
-  every page.
+- **Scrolling marquee with countdown timer** — a pickup-instructions banner sits directly below
+  the navigation on every page. It displays a **live countdown** (days/hours/minutes/seconds) to
+  the sale end date (June 15, 2026) at both the start and end of the marquee text, creating
+  urgency for users.
+- **Live Activity sidebar** — a floating right-side panel showing the **5 most recent bids**
+  across all items. Bids are shuffled randomly for variety, refreshing every 10 seconds with a
+  fade-in animation. Users can click a bid to scroll to that item in the marketplace.
+- **Wishlist feature** — users can click the ♥ heart button on any item card to add it to their
+  wishlist. Unauthenticated users are prompted to log in. Wishlisted items are stored in
+  `wishlist.json` with user details (email, mobile). Toast notifications confirm actions.
+- **Admin Wishlist Management** — a dedicated **Wishlists** page (`admin-wishlist.html`, top-menu
+  link, admin only) displays KPI cards (total wishlists, unique users, most wishlisted item) and
+  a table with item name, user, email, mobile, price, and date. Admins can click **Contact** to
+  send a pre-filled email to the user with item details, price, status, and pickup location.
+  Admins can also delete wishlist entries.
 - **App icon** — an SVG favicon (`favicon.svg`) is linked from every page.
 - **Zero-database persistence** — users and items are stored in `users.json` / `items.json`;
   uploaded images are stored on disk.

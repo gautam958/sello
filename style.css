@@ -635,19 +635,18 @@ h2 {
   letter-spacing: 0.01em;
   padding: 0.6rem 0;
   box-shadow: var(--shadow-sm);
-  text-align: center;
 }
 .marquee span {
   display: inline-block;
-  animation: pulse-subtle 2s ease-in-out infinite;
+  padding-left: 100%;
+  animation: scroll-left 25s linear infinite;
 }
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
-}
-
 .marquee:hover span {
   animation-play-state: paused;
+}
+@keyframes scroll-left {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
 }
 
 /* ── Card image wrapper + hover zoom ───────────────────────────── */
