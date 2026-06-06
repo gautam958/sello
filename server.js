@@ -451,6 +451,36 @@ app.get("/api/items", async (req, res) => {
   }
 });
 
+// PUBLIC: Get 5 most recent bids across all items (for live activity panel)
+app.get("/api/recent-bids", async (req, res) => {
+  try {
+    const items = await readData(ITEMS_FILE);
+    const recentBids = [];
+    
+    for (const item of items) {
+      if (item.bids && item.bids.length > 0) {
+        for (const bid of item.bids) {
+          recentBids.push({
+            itemId: item.id,
+            itemName: item.name,
+            itemImage: item.image,
+            amount: bid.bidAmount,
+            timestamp: bid.timestamp,
+          });
+        }
+      }
+    }
+    
+    // Sort by timestamp descending, take top 5
+    recentBids.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const topBids = recentBids.slice(0, 5);
+    
+    res.json(topBids);
+  } catch (err) {
+    res.status(500).json({ message: "Unable to fetch recent bids." });
+  }
+});
+
 // MULTI-USER BIDDING / BOOKING ACTION ROUTE
 app.post("/api/items/book/:id", async (req, res) => {
   const itemId = req.params.id;

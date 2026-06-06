@@ -42,6 +42,7 @@ function initApp(page) {
 
   if (page === "market") {
     loadMarketplaceItems();
+    initLiveActivity();
   } else if (page === "login") {
     setupLoginHandler();
   } else if (page === "signup") {
@@ -60,6 +61,86 @@ function initApp(page) {
     checkAdminAccess();
     loadAdminVisitors();
   }
+}
+
+// ─── Live Activity Sidebar (recent bids panel) ──────────────────────────────
+let liveInterval = null;
+
+function initLiveActivity() {
+  const panel = document.getElementById("live-activity-panel");
+  const toggle = document.getElementById("live-panel-toggle");
+  
+  if (!panel || !toggle) return;
+
+  // Toggle panel collapse
+  toggle.addEventListener("click", () => {
+    panel.classList.toggle("collapsed");
+    toggle.textContent = panel.classList.contains("collapsed") ? "▲" : "▼";
+  });
+
+  // Initial load
+  fetchAndShuffleLiveBids();
+
+  // Refresh every 10 seconds
+  if (liveInterval) clearInterval(liveInterval);
+  liveInterval = setInterval(fetchAndShuffleLiveBids, 10000);
+}
+
+async function fetchAndShuffleLiveBids() {
+  const container = document.getElementById("live-bids-container");
+  if (!container) return;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/recent-bids`);
+    if (!res.ok) return;
+    
+    let bids = await res.json();
+    
+    // Shuffle the bids for visual variety
+    bids = shuffleArray(bids);
+    
+    renderLiveBids(bids, container);
+  } catch (err) {
+    // Silently fail - live panel is non-critical
+  }
+}
+
+function renderLiveBids(bids, container) {
+  if (!bids || bids.length === 0) {
+    container.innerHTML = '<div class="live-empty">No bids yet</div>';
+    return;
+  }
+
+  container.innerHTML = bids.map((bid, index) => `
+    <div class="live-bid-item fade-in" style="animation-delay: ${index * 80}ms" onclick="scrollToItem('${bid.itemId}')">
+      <div class="live-bid-amount">HK$ ${bid.amount.toLocaleString()}</div>
+      <div class="live-bid-name">${escapeHtml(bid.itemName)}</div>
+      <div class="live-bid-time">${formatTimeAgo(bid.timestamp)}</div>
+    </div>
+  `).join("");
+}
+
+function scrollToItem(itemId) {
+  const itemCard = document.querySelector(`.card[data-id="${itemId}"]`);
+  if (itemCard) {
+    itemCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    itemCard.style.boxShadow = "0 0 0 3px var(--primary)";
+    setTimeout(() => {
+      itemCard.style.boxShadow = "";
+    }, 2000);
+  }
+}
+
+function formatTimeAgo(timestamp) {
+  if (!timestamp) return "";
+  const now = Date.now();
+  const then = new Date(timestamp).getTime();
+  const diff = Math.floor((now - then) / 1000);
+
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
 }
 
 // Fire-and-forget page view ping to the analytics endpoint. A stable visitor
@@ -265,7 +346,7 @@ function renderMarketplaceItems(visibleItems) {
       const statusLabel = isBooked ? "Booked" : "Available";
 
       return `
-        <div class="card">
+        <div class="card" data-id="${item.id}">
             <div class="card-img-wrapper">
               <img src="${imgSrc}" alt="${item.name}" class="card-img" data-full="${imgSrc}" onerror="this.src='https://placehold.co/600x400?text=No+Image'; this.onerror=null;">
               <span class="status-badge ${statusClass}">${statusLabel}</span>
