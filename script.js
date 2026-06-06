@@ -487,6 +487,7 @@ function setupNavbar() {
   };
 
   let html = link("index.html", "Home");
+  html += link("contact.html", "📧 Contact");
 
   if (user) {
     if (user.role === "admin") {
