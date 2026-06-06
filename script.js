@@ -39,11 +39,11 @@ function escapeHtml(str) {
 function initApp(page) {
   setupNavbar();
   trackVisit();
+  startCountdown();
 
   if (page === "market") {
     loadMarketplaceItems();
     initLiveActivity();
-    startCountdown();
     loadUserWishlist();
     setupWishlistButtons();
   } else if (page === "login") {
