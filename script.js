@@ -111,13 +111,18 @@ function renderLiveBids(bids, container) {
     return;
   }
 
-  container.innerHTML = bids.map((bid, index) => `
+  container.innerHTML = bids.map((bid, index) => {
+    const imgSrc = resolveImageSrc(bid.itemImage, 'https://placehold.co/80x60?text=No+Image');
+    return `
     <div class="live-bid-item fade-in" style="animation-delay: ${index * 80}ms" onclick="scrollToItem('${bid.itemId}')">
-      <div class="live-bid-amount">HK$ ${bid.amount.toLocaleString()}</div>
-      <div class="live-bid-name">${escapeHtml(bid.itemName)}</div>
-      <div class="live-bid-time">${formatTimeAgo(bid.timestamp)}</div>
+      <img src="${imgSrc}" alt="${escapeHtml(bid.itemName)}" class="live-bid-img" onerror="this.src='https://placehold.co/80x60?text=No+Image'; this.onerror=null;">
+      <div class="live-bid-content">
+        <div class="live-bid-amount">HK$ ${bid.amount.toLocaleString()}</div>
+        <div class="live-bid-name">${escapeHtml(bid.itemName)}</div>
+        <div class="live-bid-time">${formatTimeAgo(bid.timestamp)}</div>
+      </div>
     </div>
-  `).join("");
+  `}).join("");
 }
 
 function scrollToItem(itemId) {
