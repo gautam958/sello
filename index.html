@@ -15,74 +15,36 @@
 
     <div class="marquee">
       <span
-        >All Items PickUp From Tung Chung ( Coastal Skyline) Once Admin Confirm
-        You will received detailed instruction , Pickup must be before
-        16-June-2026.</span
+        >🚚 Move‑Out Sale! All items pickup from Coastal Skyline, Tung Chung –
+        all bids are considered and once admin confirm you will received
+        detailed instructions on your email, signup and book your items, pickup
+        before 16 June 2026.</span
       >
     </div>
 
     <main class="container">
-      <h2 style="margin-bottom: 1rem">Available Items</h2>
-      <div
-        id="items-filters"
-        style="
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.75rem;
-          align-items: center;
-          margin-bottom: 1.25rem;
-          padding: 0.75rem 1rem;
-          background: #fff;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-        "
-      >
-        <input
-          type="text"
-          id="filter-search"
-          placeholder="Search name or description..."
-          style="
-            flex: 1 1 220px;
-            padding: 0.5rem 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 0.9rem;
-          "
-        />
-        <select
-          id="filter-status"
-          style="
-            padding: 0.5rem 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 0.9rem;
-          "
-        >
+      <h2 style="margin: 0 0 1rem">Available Items</h2>
+      <div id="items-filters" class="filter-bar">
+        <div class="filter-search">
+          <input
+            type="text"
+            id="filter-search"
+            placeholder="Search name or description..."
+          />
+        </div>
+        <select id="filter-status">
           <option value="all">All status</option>
           <option value="Available">Available</option>
           <option value="Booked">Booked</option>
         </select>
-        <select
-          id="filter-sort"
-          style="
-            padding: 0.5rem 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 0.9rem;
-          "
-        >
+        <select id="filter-sort">
           <option value="default">Default</option>
           <option value="price-asc">Price: Low to High</option>
           <option value="price-desc">Price: High to Low</option>
           <option value="bids-desc">Most Bids</option>
           <option value="name-asc">Name: A → Z</option>
         </select>
-        <button
-          type="button"
-          id="filter-reset"
-          class="btn"
-          style="padding: 0.5rem 0.9rem; font-size: 0.85rem"
-        >
+        <button type="button" id="filter-reset" class="filter-reset">
           Reset
         </button>
       </div>

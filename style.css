@@ -258,8 +258,99 @@ nav #logout-btn:hover,
 
 .container {
   max-width: 1240px;
-  margin: 3rem auto;
+  margin: 1.25rem auto 3rem;
   padding: 0 2rem;
+}
+
+/* ── Modern filter bar ──────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin: 0.5rem 0 1.5rem;
+  padding: 0.65rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 14px;
+  box-shadow:
+    0 6px 20px -12px rgba(79, 70, 229, 0.25),
+    0 1px 2px rgba(15, 23, 42, 0.04);
+  backdrop-filter: blur(6px);
+}
+.filter-bar .filter-search {
+  flex: 1 1 240px;
+  position: relative;
+}
+.filter-bar .filter-search input {
+  width: 100%;
+  padding: 0.65rem 0.9rem 0.65rem 2.2rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  background: #f9fafb;
+  transition: all 0.2s ease;
+}
+.filter-bar .filter-search input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+.filter-bar .filter-search::before {
+  content: "";
+  position: absolute;
+  left: 0.8rem;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>")
+    center/contain no-repeat;
+  pointer-events: none;
+}
+.filter-bar select {
+  padding: 0.6rem 2rem 0.6rem 0.85rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  background-color: #f9fafb;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 14px;
+  appearance: none;
+  -webkit-appearance: none;
+  color: var(--secondary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.filter-bar select:hover {
+  border-color: var(--primary);
+}
+.filter-bar select:focus {
+  outline: none;
+  border-color: var(--primary);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+.filter-bar .filter-reset {
+  padding: 0.6rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary), #6366f1);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+.filter-bar .filter-reset:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px -8px rgba(79, 70, 229, 0.55);
 }
 
 h2 {
