@@ -495,6 +495,9 @@ function setupNavbar() {
       html += link("logs.html", "Logs");
       html += link("visitors.html", "Visitors");
       html += link("admin-wishlist.html", "Wishlists");
+    } else {
+      // Regular user - show wishlist link
+      html += link("wishlist.html", "♥ Wishlist");
     }
     html += `<span class="nav-user">Welcome, ${user.username} (${user.role})</span>`;
     html += `<button id="logout-btn" class="btn nav-logout">Logout</button>`;
