@@ -94,11 +94,7 @@ async function fetchAndShuffleLiveBids() {
     const res = await fetch(`${API_BASE_URL}/recent-bids`);
     if (!res.ok) return;
     
-    let bids = await res.json();
-    
-    // Shuffle the bids for visual variety
-    bids = shuffleArray(bids);
-    
+    const bids = await res.json();
     renderLiveBids(bids, container);
   } catch (err) {
     // Silently fail - live panel is non-critical

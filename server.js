@@ -451,7 +451,8 @@ app.get("/api/items", async (req, res) => {
   }
 });
 
-// PUBLIC: Get 5 most recent bids across all items (for live activity panel)
+// PUBLIC: Get 5 recent bids across all items (for live activity panel)
+// Shuffles all bids randomly so you see variety - sometimes multiple from same item
 app.get("/api/recent-bids", async (req, res) => {
   try {
     const items = await readData(ITEMS_FILE);
@@ -471,8 +472,13 @@ app.get("/api/recent-bids", async (req, res) => {
       }
     }
     
-    // Sort by timestamp descending, take top 5
-    recentBids.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    // Shuffle bids randomly for variety (Fisher-Yates shuffle)
+    for (let i = recentBids.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [recentBids[i], recentBids[j]] = [recentBids[j], recentBids[i]];
+    }
+    
+    // Take top 5 from shuffled array
     const topBids = recentBids.slice(0, 5);
     
     res.json(topBids);
