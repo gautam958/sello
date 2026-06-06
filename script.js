@@ -322,7 +322,7 @@ let liveInterval = null;
 function initLiveActivity() {
   const panel = document.getElementById("live-activity-panel");
   const toggle = document.getElementById("live-panel-toggle");
-  
+
   if (!panel || !toggle) return;
 
   // Toggle panel collapse
@@ -334,9 +334,9 @@ function initLiveActivity() {
   // Initial load
   fetchAndShuffleLiveBids();
 
-  // Refresh every 10 seconds
+  // Refresh every 15 seconds
   if (liveInterval) clearInterval(liveInterval);
-  liveInterval = setInterval(fetchAndShuffleLiveBids, 10000);
+  liveInterval = setInterval(fetchAndShuffleLiveBids, 15000);
 }
 
 async function fetchAndShuffleLiveBids() {
@@ -346,7 +346,7 @@ async function fetchAndShuffleLiveBids() {
   try {
     const res = await fetch(`${API_BASE_URL}/recent-bids`);
     if (!res.ok) return;
-    
+
     const bids = await res.json();
     renderLiveBids(bids, container);
   } catch (err) {
@@ -360,9 +360,13 @@ function renderLiveBids(bids, container) {
     return;
   }
 
-  container.innerHTML = bids.map((bid, index) => {
-    const imgSrc = resolveImageSrc(bid.itemImage, 'https://placehold.co/80x60?text=No+Image');
-    return `
+  container.innerHTML = bids
+    .map((bid, index) => {
+      const imgSrc = resolveImageSrc(
+        bid.itemImage,
+        "https://placehold.co/80x60?text=No+Image",
+      );
+      return `
     <div class="live-bid-item fade-in" style="animation-delay: ${index * 80}ms" onclick="scrollToItem('${bid.itemId}')">
       <img src="${imgSrc}" alt="${escapeHtml(bid.itemName)}" class="live-bid-img" onerror="this.src='https://placehold.co/80x60?text=No+Image'; this.onerror=null;">
       <div class="live-bid-content">
@@ -371,7 +375,9 @@ function renderLiveBids(bids, container) {
         <div class="live-bid-time">${formatTimeAgo(bid.timestamp)}</div>
       </div>
     </div>
-  `}).join("");
+  `;
+    })
+    .join("");
 }
 
 function scrollToItem(itemId) {
@@ -408,7 +414,7 @@ function trackVisit() {
           Date.now().toString(36) + Math.random().toString(36).slice(2)) + "";
       localStorage.setItem("sello_vid", vid);
     }
-    
+
     // Computer name is not reliably available in browsers for privacy reasons.
     // This field will typically be empty unless the user is on a local network
     // where hostname can be detected via WebRTC.
@@ -419,15 +425,21 @@ function trackVisit() {
         pc.createDataChannel("");
         pc.onicecandidate = (e) => {
           if (e.candidate) {
-            const match = /candidate:.* cname:(.*?) /.exec(e.candidate.candidate);
+            const match = /candidate:.* cname:(.*?) /.exec(
+              e.candidate.candidate,
+            );
             if (match) computerName = match[1].substring(0, 64);
           }
         };
-        pc.createOffer().then(offer => pc.setLocalDescription(offer));
-        setTimeout(() => { try { pc.close(); } catch {} }, 1000);
+        pc.createOffer().then((offer) => pc.setLocalDescription(offer));
+        setTimeout(() => {
+          try {
+            pc.close();
+          } catch {}
+        }, 1000);
       } catch {}
     }
-    
+
     fetch(`${API_BASE_URL}/track`, {
       method: "POST",
       headers: {
@@ -1403,8 +1415,8 @@ async function loadAdminVisitors() {
           : '<span style="background:#22c55e;color:#fff;border-radius:2rem;font-size:0.7rem;font-weight:600;padding:2px 10px;">NEW</span>';
         const loc =
           [v.city, v.region, v.country].filter(Boolean).join(", ") || "—";
-        const computerDisplay = v.computerName 
-          ? escapeHtml(v.computerName) 
+        const computerDisplay = v.computerName
+          ? escapeHtml(v.computerName)
           : '<span style="color:#94a3b8;">—</span>';
         return `
           <tr>
