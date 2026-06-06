@@ -1295,6 +1295,10 @@ Sello Team`;
       text: emailBody,
     });
 
+    // Update wishlist entry with email sent timestamp
+    entry.emailSentAt = new Date().toISOString();
+    await writeData(WISHLIST_FILE, wishlist);
+
     res.json({ message: "Email sent successfully." });
   } catch (err) {
     res.status(500).json({ message: "Failed to send email." });

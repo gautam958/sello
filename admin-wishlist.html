@@ -60,6 +60,7 @@
               <th>Mobile</th>
               <th>Price</th>
               <th>Added</th>
+              <th>Email Sent</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -215,7 +216,7 @@ Sello Team`;
           });
 
           if (!res.ok) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ef4444;">Unable to load wishlists.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#ef4444;">Unable to load wishlists.</td></tr>`;
             return;
           }
 
@@ -235,7 +236,7 @@ Sello Team`;
           kpiTopItem.textContent = topItem ? `${topItem[0]} (${topItem[1]})` : "—";
 
           if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#94a3b8;">No wishlists yet.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#94a3b8;">No wishlists yet.</td></tr>`;
             return;
           }
 
@@ -247,6 +248,7 @@ Sello Team`;
               <td>${escapeHtml(w.userMobile || "—")}</td>
               <td>HK$${parseFloat(w.itemPrice).toFixed(2)}</td>
               <td style="font-size:0.85rem;color:#64748b;">${new Date(w.addedAt).toLocaleString()}</td>
+              <td style="font-size:0.85rem;">${w.emailSentAt ? '<span style="color:#22c55e;">✅ ' + new Date(w.emailSentAt).toLocaleString() + '</span>' : '<span style="color:#94a3b8;">—</span>'}</td>
               <td>
                 <div class="actions-cell">
                   <button class="btn contact-btn" onclick="openContactModal('${w.id}', '${escapeHtml(w.itemName)}', '${escapeHtml(w.userId)}', '${escapeHtml(w.userEmail)}', '${escapeHtml(w.userMobile || "")}', '${w.itemPrice}', '${w.itemStatus || "Available"}')">📧 Contact</button>
@@ -257,7 +259,7 @@ Sello Team`;
           `).join("");
 
         } catch (err) {
-          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ef4444;">Error loading wishlists.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#ef4444;">Error loading wishlists.</td></tr>`;
         }
       }
 
