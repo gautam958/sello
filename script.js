@@ -43,6 +43,9 @@ function initApp(page) {
   if (page === "market") {
     loadMarketplaceItems();
     initLiveActivity();
+    startCountdown();
+    loadUserWishlist();
+    setupWishlistButtons();
   } else if (page === "login") {
     setupLoginHandler();
   } else if (page === "signup") {
@@ -60,7 +63,257 @@ function initApp(page) {
   } else if (page === "visitors") {
     checkAdminAccess();
     loadAdminVisitors();
+  } else if (page === "wishlist") {
+    loadUserWishlistPage();
+  } else if (page === "admin-wishlist") {
+    checkAdminAccess();
   }
+}
+
+// ─── User Wishlist Page ─────────────────────────────────────────────────────
+async function loadUserWishlistPage() {
+  const grid = document.getElementById("wishlist-grid");
+  const emptyEl = document.getElementById("wishlist-empty");
+  
+  if (!grid) return;
+
+  const user = getSessionUser();
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/wishlist`, {
+      headers: getAuthHeaders(),
+    });
+    
+    if (!res.ok) {
+      grid.innerHTML = '<p style="color:#ef4444;text-align:center;">Unable to load wishlist.</p>';
+      return;
+    }
+
+    const wishlist = await res.json();
+
+    if (wishlist.length === 0) {
+      grid.style.display = "none";
+      emptyEl.style.display = "block";
+      return;
+    }
+
+    emptyEl.style.display = "none";
+    grid.style.display = "grid";
+
+    grid.innerHTML = wishlist.map((w) => {
+      const imgSrc = resolveImageSrc(w.itemImage, "https://placehold.co/600x400?text=No+Image");
+      return `
+        <div class="card" data-id="${w.itemId}">
+          <div class="card-img-wrapper">
+            <img src="${imgSrc}" alt="${escapeHtml(w.itemName)}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'; this.onerror=null;">
+          </div>
+          <div class="card-content">
+            <h3 class="card-title">${escapeHtml(w.itemName)}</h3>
+            <p style="font-size: 0.9rem; color: #64748b; margin-bottom: 0.5rem;">Added ${new Date(w.addedAt).toLocaleDateString()}</p>
+            <p style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">HK$${parseFloat(w.itemPrice).toFixed(2)}</p>
+            <div class="card-footer" style="gap: 0.5rem;">
+              <a href="index.html" class="btn" style="flex:1;">View Item</a>
+              <button class="btn remove-wishlist-btn" data-item-id="${w.itemId}" style="background-color: #64748b;">Remove</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    // Remove button handlers
+    document.querySelectorAll(".remove-wishlist-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const itemId = btn.dataset.itemId;
+        try {
+          const res = await fetch(`${API_BASE_URL}/wishlist/${itemId}`, {
+            method: "DELETE",
+            headers: getAuthHeaders(),
+          });
+          if (res.ok) {
+            btn.closest(".card").remove();
+            showToast("Removed from wishlist");
+            // Check if empty
+            if (grid.querySelectorAll(".card").length === 0) {
+              grid.style.display = "none";
+              emptyEl.style.display = "block";
+            }
+          }
+        } catch (err) {
+          showToast("Failed to remove");
+        }
+      });
+    });
+
+  } catch (err) {
+    grid.innerHTML = '<p style="color:#ef4444;text-align:center;">Error loading wishlist.</p>';
+  }
+}
+
+// ─── Countdown Timer ───────────────────────────────────────────────────────
+const SALE_END_DATE = new Date("2026-06-15T23:59:59");
+
+function startCountdown() {
+  const el = document.getElementById("marquee-countdown");
+  if (!el) return;
+
+  function update() {
+    const now = new Date();
+    const diff = SALE_END_DATE - now;
+
+    if (diff <= 0) {
+      el.textContent = "🚚 Sale has ended! Pickup remaining items by June 16.";
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    const countdown = days > 0
+      ? `⏰ Sale ends in ${days}d ${hours}h ${minutes}m ${seconds}s — Pickup from Coastal Skyline, Tung Chung — Book your items now!`
+      : `⏰ Sale ends in ${hours}h ${minutes}m ${seconds}s — Pickup from Coastal Skyline, Tung Chung — Book your items now!`;
+
+    el.textContent = countdown;
+  }
+
+  update();
+  setInterval(update, 1000);
+}
+
+// ─── Wishlist Functions ─────────────────────────────────────────────────────
+let userWishlist = [];
+
+async function loadUserWishlist() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/wishlist`, {
+      headers: getAuthHeaders(),
+    });
+    if (res.ok) {
+      userWishlist = await res.json();
+      updateWishlistButtons();
+    }
+  } catch (err) {
+    // Silently fail
+  }
+}
+
+function updateWishlistButtons() {
+  document.querySelectorAll(".wishlist-btn").forEach((btn) => {
+    const itemId = btn.dataset.id;
+    const isWishlisted = userWishlist.some((w) => w.itemId === itemId);
+    btn.classList.toggle("active", isWishlisted);
+    btn.title = isWishlisted ? "Remove from Wishlist" : "Add to Wishlist";
+  });
+}
+
+function setupWishlistButtons() {
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".wishlist-btn");
+    if (!btn) return;
+
+    const user = getSessionUser();
+    if (!user) {
+      // Redirect to signup/login - same as bid flow
+      showAuthRequiredModal("To add items to your wishlist, please log in or create an account.");
+      return;
+    }
+
+    const itemId = btn.dataset.id;
+    const isActive = btn.classList.contains("active");
+
+    try {
+      if (isActive) {
+        // Remove from wishlist
+        const res = await fetch(`${API_BASE_URL}/wishlist/${itemId}`, {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        });
+        if (res.ok) {
+          userWishlist = userWishlist.filter((w) => w.itemId !== itemId);
+          btn.classList.remove("active");
+          btn.title = "Add to Wishlist";
+          showToast("Removed from wishlist");
+        }
+      } else {
+        // Add to wishlist
+        const res = await fetch(`${API_BASE_URL}/wishlist`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify({ itemId }),
+        });
+        if (res.ok) {
+          const newEntry = {
+            id: Date.now().toString(),
+            itemId,
+            itemName: btn.dataset.name,
+          };
+          userWishlist.push(newEntry);
+          btn.classList.add("active");
+          btn.title = "Remove from Wishlist";
+          showToast("Added to wishlist!");
+        } else {
+          const data = await res.json();
+          showToast(data.message || "Failed to add to wishlist");
+        }
+      }
+    } catch (err) {
+      showToast("Something went wrong");
+    }
+  });
+}
+
+function showAuthRequiredModal(message) {
+  const modal = document.createElement("div");
+  modal.className = "bid-modal";
+  modal.style.display = "flex";
+  modal.innerHTML = `
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+      <span class="close-btn" onclick="this.closest('.bid-modal').remove()">&times;</span>
+      <h2 style="margin-bottom: 1rem;">Login Required</h2>
+      <p style="color: #64748b; margin-bottom: 1.5rem;">${message}</p>
+      <div style="display: flex; gap: 1rem; justify-content: center;">
+        <a href="login.html" class="btn">Login</a>
+        <a href="signup.html" class="btn" style="background-color: #64748b;">Sign Up</a>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.remove();
+  });
+}
+
+function showToast(message) {
+  const existing = document.querySelector(".toast-message");
+  if (existing) existing.remove();
+
+  const toast = document.createElement("div");
+  toast.className = "toast-message";
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--secondary);
+    color: #fff;
+    padding: 0.75rem 1.5rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    z-index: 9999;
+    animation: toastSlideUp 0.3s ease;
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
 }
 
 // ─── Live Activity Sidebar (recent bids panel) ──────────────────────────────
@@ -226,7 +479,9 @@ function setupNavbar() {
       html += link("users.html", "Manage Users");
       html += link("logs.html", "Logs");
       html += link("visitors.html", "Visitors");
+      html += link("admin-wishlist.html", "Wishlists");
     }
+    html += link("wishlist.html", "♥ Wishlist");
     html += `<span class="nav-user">Welcome, ${user.username} (${user.role})</span>`;
     html += `<button id="logout-btn" class="btn nav-logout">Logout</button>`;
   } else {
@@ -351,6 +606,11 @@ function renderMarketplaceItems(visibleItems) {
             <div class="card-img-wrapper">
               <img src="${imgSrc}" alt="${item.name}" class="card-img" data-full="${imgSrc}" onerror="this.src='https://placehold.co/600x400?text=No+Image'; this.onerror=null;">
               <span class="status-badge ${statusClass}">${statusLabel}</span>
+              <button class="wishlist-btn" data-id="${item.id}" data-name="${escapeHtml(item.name)}" title="Add to Wishlist">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+              </button>
             </div>
             <div class="card-content">
                 <h3 class="card-title">${item.name}</h3>

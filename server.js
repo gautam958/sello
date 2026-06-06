@@ -38,6 +38,7 @@ const USERS_FILE = path.join(__dirname, "users.json");
 const ITEMS_FILE = path.join(__dirname, "items.json");
 const LOGS_FILE = path.join(__dirname, "logs.json");
 const VISITORS_FILE = path.join(__dirname, "visitors.json");
+const WISHLIST_FILE = path.join(__dirname, "wishlist.json");
 const UPLOAD_DIR = path.join(__dirname, "images");
 
 // Ensure image upload directory layout space exists natively
@@ -1165,6 +1166,150 @@ app.delete("/api/admin/visitors", requireAdmin, async (req, res) => {
     res.json({ message: "Visitors cleared." });
   } catch (err) {
     res.status(500).json({ message: "Failed to clear visitors." });
+  }
+});
+
+// ─── Wishlist ───────────────────────────────────────────────────────────────
+
+// Get user's wishlist (auth required)
+app.get("/api/wishlist", authenticate, async (req, res) => {
+  try {
+    const wishlist = await readData(WISHLIST_FILE);
+    const userWishlist = wishlist.filter((w) => w.userId === req.auth.username);
+    res.json(userWishlist);
+  } catch (err) {
+    res.status(500).json({ message: "Unable to fetch wishlist." });
+  }
+});
+
+// Add item to wishlist (auth required)
+app.post("/api/wishlist", authenticate, async (req, res) => {
+  try {
+    const { itemId } = req.body;
+    if (!itemId) return res.status(400).json({ message: "Item ID required." });
+
+    const items = await readData(ITEMS_FILE);
+    const item = items.find((i) => i.id === itemId);
+    if (!item) return res.status(404).json({ message: "Item not found." });
+
+    const wishlist = await readData(WISHLIST_FILE);
+    
+    // Check if already wishlisted
+    const existing = wishlist.find(
+      (w) => w.userId === req.auth.username && w.itemId === itemId,
+    );
+    if (existing) {
+      return res.status(400).json({ message: "Item already in wishlist." });
+    }
+
+    // Get user details
+    const users = await readData(USERS_FILE);
+    const user = users.find((u) => u.username === req.auth.username);
+
+    wishlist.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      userId: req.auth.username,
+      userEmail: user?.email || "",
+      userMobile: user?.mobile || "",
+      itemId: item.id,
+      itemName: item.name,
+      itemPrice: item.price,
+      itemImage: item.image,
+      addedAt: new Date().toISOString(),
+    });
+
+    await writeData(WISHLIST_FILE, wishlist);
+    res.json({ message: "Added to wishlist." });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to add to wishlist." });
+  }
+});
+
+// Remove item from wishlist (auth required)
+app.delete("/api/wishlist/:itemId", authenticate, async (req, res) => {
+  try {
+    const wishlist = await readData(WISHLIST_FILE);
+    const filtered = wishlist.filter(
+      (w) =>
+        !(w.userId === req.auth.username && w.itemId === req.params.itemId),
+    );
+    await writeData(WISHLIST_FILE, filtered);
+    res.json({ message: "Removed from wishlist." });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to remove from wishlist." });
+  }
+});
+
+// ADMIN: Get all wishlists
+app.get("/api/admin/wishlist", requireAdmin, async (req, res) => {
+  try {
+    const wishlist = await readData(WISHLIST_FILE);
+    // Sort by addedAt descending
+    wishlist.sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
+    res.json(wishlist);
+  } catch (err) {
+    res.status(500).json({ message: "Unable to fetch wishlists." });
+  }
+});
+
+// ADMIN: Send inquiry email to wishlist user
+app.post("/api/admin/wishlist/contact", requireAdmin, async (req, res) => {
+  try {
+    const { wishlistId, message } = req.body;
+    if (!wishlistId || !message) {
+      return res.status(400).json({ message: "Wishlist ID and message required." });
+    }
+
+    const wishlist = await readData(WISHLIST_FILE);
+    const entry = wishlist.find((w) => w.id === wishlistId);
+    if (!entry) return res.status(404).json({ message: "Wishlist entry not found." });
+
+    const items = await readData(ITEMS_FILE);
+    const item = items.find((i) => i.id === entry.itemId);
+    
+    const itemPrice = item ? item.price : entry.itemPrice;
+    const itemBids = item?.bids?.length || 0;
+    const itemHighest = item?.highestBid || 0;
+
+    const emailBody = `Hi ${entry.userId},
+
+You have "${entry.itemName}" on your wishlist from Sello.
+
+📦 Item Details:
+   • Current Price: HK$ ${itemPrice}
+   • Status: ${item?.status || "N/A"}
+   • Highest Bid: HK$ ${itemHighest} (${itemBids} bids)
+   • Pickup Location: Coastal Skyline, Tung Chung
+
+💬 Message from Admin:
+${message}
+
+---
+Best regards,
+Sello Team`;
+
+    sendMail({
+      to: entry.userEmail,
+      cc: OWNER_EMAIL,
+      subject: `Inquiry about your wishlisted item: ${entry.itemName}`,
+      text: emailBody,
+    });
+
+    res.json({ message: "Email sent successfully." });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to send email." });
+  }
+});
+
+// ADMIN: Delete wishlist entry
+app.delete("/api/admin/wishlist/:id", requireAdmin, async (req, res) => {
+  try {
+    const wishlist = await readData(WISHLIST_FILE);
+    const filtered = wishlist.filter((w) => w.id !== req.params.id);
+    await writeData(WISHLIST_FILE, filtered);
+    res.json({ message: "Wishlist entry deleted." });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to delete entry." });
   }
 });
 

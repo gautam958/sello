@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sello - Wishlist Management</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header>
+      <a href="index.html" class="logo">Sello Dashboard</a>
+      <nav id="nav-menu"></nav>
+    </header>
+
+    <div class="marquee">
+      <span
+        >🚚 Move‑Out Sale! All items pickup from Coastal Skyline, Tung Chung –
+        all bids are considered and once owner confirm you will received
+        detailed instructions on your email, signup and book your items, pickup
+        before 16 June 2026.</span
+      >
+    </div>
+
+    <main class="container">
+      <h2 style="margin: 0 0 1rem">Wishlist Management</h2>
+      <p style="color: #64748b; margin: 0.25rem 0 1.5rem">
+        Track user interest and follow up via email.
+      </p>
+
+      <!-- KPI cards -->
+      <div
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 0.75rem;
+          margin-bottom: 1.5rem;
+        "
+      >
+        <div class="kpi-card">
+          <div class="kpi-label">Total Wishlists</div>
+          <div class="kpi-value" id="kpi-total">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Unique Users</div>
+          <div class="kpi-value" id="kpi-users" style="color: #0ea5e9">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Top Item</div>
+          <div class="kpi-value" id="kpi-top-item" style="font-size: 1rem; color: #64748b;">—</div>
+        </div>
+      </div>
+
+      <div style="overflow-x: auto">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>User</th>
+              <th>Email</th>
+              <th>Mobile</th>
+              <th>Price</th>
+              <th>Added</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="wishlist-table"></tbody>
+        </table>
+      </div>
+
+      <div style="margin-top: 1.5rem;">
+        <button type="button" class="btn" id="refresh-btn">Refresh</button>
+      </div>
+    </main>
+
+    <!-- Contact User Modal -->
+    <div id="contact-modal" class="bid-modal" style="display: none">
+      <div class="modal-content" style="max-width: 500px;">
+        <span class="close-btn" onclick="closeContactModal()">&times;</span>
+        <h2 style="margin-bottom: 1rem;">Contact User</h2>
+        
+        <div style="background: var(--bg-main); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem;">
+          <p style="margin-bottom: 0.5rem;"><strong>Item:</strong> <span id="modal-item-name"></span></p>
+          <p style="margin-bottom: 0.5rem;"><strong>User:</strong> <span id="modal-user-name"></span></p>
+          <p style="margin-bottom: 0.5rem;"><strong>Email:</strong> <span id="modal-user-email"></span></p>
+          <p style="margin-bottom: 0;"><strong>Mobile:</strong> <span id="modal-user-mobile"></span></p>
+        </div>
+
+        <div class="form-group">
+          <label for="contact-message">Message</label>
+          <textarea id="contact-message" rows="5" placeholder="Hi! We noticed you're interested in this item. Feel free to reach out if you have any questions!"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+          <button id="send-email-btn" class="btn">Send Email</button>
+          <button onclick="closeContactModal()" class="btn" style="background-color: #64748b;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      .kpi-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding: 0.85rem 1rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+      .kpi-label {
+        color: #64748b;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.25rem;
+      }
+      .kpi-value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1;
+      }
+      .contact-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+      }
+    </style>
+
+    <script src="script.js"></script>
+    <script>
+      let currentWishlistId = null;
+      
+      document.addEventListener("DOMContentLoaded", () => {
+        initApp("admin-wishlist");
+      });
+
+      function openContactModal(wishlistId, itemName, userName, email, mobile) {
+        currentWishlistId = wishlistId;
+        document.getElementById("modal-item-name").textContent = itemName;
+        document.getElementById("modal-user-name").textContent = userName;
+        document.getElementById("modal-user-email").textContent = email;
+        document.getElementById("modal-user-mobile").textContent = mobile || "—";
+        document.getElementById("contact-modal").style.display = "flex";
+      }
+
+      function closeContactModal() {
+        document.getElementById("contact-modal").style.display = "none";
+        currentWishlistId = null;
+      }
+
+      document.getElementById("send-email-btn").addEventListener("click", async () => {
+        const message = document.getElementById("contact-message").value.trim();
+        if (!message) {
+          alert("Please enter a message.");
+          return;
+        }
+
+        const btn = document.getElementById("send-email-btn");
+        btn.disabled = true;
+        btn.textContent = "Sending...";
+
+        try {
+          const res = await fetch(`${API_BASE_URL}/admin/wishlist/contact`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...getAuthHeaders(),
+            },
+            body: JSON.stringify({
+              wishlistId: currentWishlistId,
+              message,
+            }),
+          });
+
+          if (res.ok) {
+            alert("Email sent successfully!");
+            closeContactModal();
+            loadWishlistData();
+          } else {
+            const data = await res.json();
+            alert(data.message || "Failed to send email.");
+          }
+        } catch (err) {
+          alert("Error sending email.");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Send Email";
+        }
+      });
+
+      async function loadWishlistData() {
+        const tbody = document.getElementById("wishlist-table");
+        const kpiTotal = document.getElementById("kpi-total");
+        const kpiUsers = document.getElementById("kpi-users");
+        const kpiTopItem = document.getElementById("kpi-top-item");
+
+        try {
+          const res = await fetch(`${API_BASE_URL}/admin/wishlist`, {
+            headers: getAuthHeaders(),
+          });
+
+          if (!res.ok) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ef4444;">Unable to load wishlists.</td></tr>`;
+            return;
+          }
+
+          const data = await res.json();
+
+          // Update KPIs
+          kpiTotal.textContent = data.length;
+          const uniqueUsers = new Set(data.map(w => w.userId)).size;
+          kpiUsers.textContent = uniqueUsers;
+
+          // Find top item
+          const itemCounts = {};
+          data.forEach(w => {
+            itemCounts[w.itemName] = (itemCounts[w.itemName] || 0) + 1;
+          });
+          const topItem = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])[0];
+          kpiTopItem.textContent = topItem ? `${topItem[0]} (${topItem[1]})` : "—";
+
+          if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#94a3b8;">No wishlists yet.</td></tr>`;
+            return;
+          }
+
+          tbody.innerHTML = data.map(w => `
+            <tr>
+              <td style="font-weight:600;">${escapeHtml(w.itemName)}</td>
+              <td>${escapeHtml(w.userId)}</td>
+              <td><a href="mailto:${escapeHtml(w.userEmail)}">${escapeHtml(w.userEmail)}</a></td>
+              <td>${escapeHtml(w.userMobile || "—")}</td>
+              <td>HK$${parseFloat(w.itemPrice).toFixed(2)}</td>
+              <td style="font-size:0.85rem;color:#64748b;">${new Date(w.addedAt).toLocaleString()}</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn contact-btn" onclick="openContactModal('${w.id}', '${escapeHtml(w.itemName)}', '${escapeHtml(w.userId)}', '${escapeHtml(w.userEmail)}', '${escapeHtml(w.userMobile || "")}')">📧 Contact</button>
+                  <button class="btn" style="background-color:#ef4444;padding:0.4rem 0.8rem;font-size:0.85rem;" onclick="deleteWishlist('${w.id}')">Delete</button>
+                </div>
+              </td>
+            </tr>
+          `).join("");
+
+        } catch (err) {
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ef4444;">Error loading wishlists.</td></tr>`;
+        }
+      }
+
+      async function deleteWishlist(id) {
+        if (!confirm("Delete this wishlist entry?")) return;
+
+        try {
+          const res = await fetch(`${API_BASE_URL}/admin/wishlist/${id}`, {
+            method: "DELETE",
+            headers: getAuthHeaders(),
+          });
+          if (res.ok) {
+            loadWishlistData();
+          } else {
+            alert("Failed to delete.");
+          }
+        } catch (err) {
+          alert("Error deleting entry.");
+        }
+      }
+
+      document.getElementById("refresh-btn").addEventListener("click", loadWishlistData);
+
+      // Load on page load
+      loadWishlistData();
+    </script>
+  </body>
+</html>
