@@ -1317,6 +1317,39 @@ app.delete("/api/admin/wishlist/:id", requireAdmin, async (req, res) => {
   }
 });
 
+// PUBLIC: Contact form - send email to owner
+app.post("/api/contact", async (req, res) => {
+  try {
+    const { name, email, subject, message } = req.body;
+
+    if (!name || !email || !subject || !message) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    const emailBody = `New Contact Form Submission
+
+From: ${name}
+Email: ${email}
+Subject: ${subject}
+
+Message:
+${message}
+
+---
+Sent from Sello Marketplace Contact Form`;
+
+    sendMail({
+      to: OWNER_EMAIL,
+      subject: `[Sello Contact] ${subject}`,
+      text: emailBody,
+    });
+
+    res.json({ message: "Message sent successfully!" });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to send message." });
+  }
+});
+
 // Forward standard root routing to check status
 app.get("/", (req, res) =>
   res.send(

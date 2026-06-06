@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <title>Contact - Sello Marketplace</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -107,9 +108,9 @@
       });
 
       // Contact form submission
-      document.getElementById("contact-form").addEventListener("submit", (e) => {
+      document.getElementById("contact-form").addEventListener("submit", async (e) => {
         e.preventDefault();
-        
+
         const name = document.getElementById("contact-name").value.trim();
         const email = document.getElementById("contact-email").value.trim();
         const subject = document.getElementById("contact-subject").value.trim();
@@ -120,11 +121,30 @@
           return;
         }
 
-        // Simulate sending (show success message)
-        showToast("Message sent! We'll get back to you soon.");
-        
-        // Clear form
-        document.getElementById("contact-form").reset();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Sending...";
+
+        try {
+          const res = await fetch(`${API_BASE_URL}/contact`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, email, subject, message }),
+          });
+
+          const data = await res.json();
+          if (res.ok) {
+            showToast("Message sent! We'll get back to you soon.");
+            document.getElementById("contact-form").reset();
+          } else {
+            showToast(data.message || "Failed to send message.");
+          }
+        } catch (err) {
+          showToast("Connection error. Please try again.");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Send Message";
+        }
       });
     });
   </script>
