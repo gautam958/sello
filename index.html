@@ -99,6 +99,65 @@
       </div>
     </div>
 
+    <!-- Inline Auth Modal (Login + Signup tabs) -->
+    <div id="auth-modal" class="bid-modal" style="display: none">
+      <div class="modal-content" style="max-width: 420px;">
+        <span class="close-btn" id="auth-modal-close">&times;</span>
+        <h2 style="margin-bottom: 0.5rem;">Welcome!</h2>
+        <p style="color: #64748b; margin-bottom: 1.5rem; font-size: 0.9rem;">Login or create an account to place your bid</p>
+
+        <!-- Tabs -->
+        <div style="display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem;">
+          <button id="tab-login" class="auth-tab active" style="flex:1; padding:0.75rem; border:none; background:none; font-weight:600; color:var(--primary); border-bottom:2px solid var(--primary); cursor:pointer;">Login</button>
+          <button id="tab-signup" class="auth-tab" style="flex:1; padding:0.75rem; border:none; background:none; font-weight:600; color:#64748b; cursor:pointer;">Sign Up</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="auth-login-form" style="display: block;">
+          <div class="form-group">
+            <label for="auth-username">Username</label>
+            <input type="text" id="auth-username" required />
+          </div>
+          <div class="form-group">
+            <label for="auth-password">Password</label>
+            <input type="password" id="auth-password" required />
+          </div>
+          <p id="auth-login-error" style="color:#ef4444; font-size:0.85rem; margin-bottom:1rem; display:none;"></p>
+          <button type="submit" class="btn" style="width:100%;">Login</button>
+        </form>
+
+        <!-- Signup Form -->
+        <form id="auth-signup-form" style="display: none;">
+          <div class="form-group">
+            <label for="auth-new-username">Username</label>
+            <input type="text" id="auth-new-username" required />
+          </div>
+          <div class="form-group">
+            <label for="auth-email">Email</label>
+            <input type="email" id="auth-new-email" required />
+          </div>
+          <div class="form-group">
+            <label for="auth-mobile">Mobile Number</label>
+            <input type="tel" id="auth-new-mobile" required />
+          </div>
+          <div class="form-group">
+            <label for="auth-new-password">Password</label>
+            <input type="password" id="auth-new-password" required />
+          </div>
+          <div class="form-group">
+            <label for="auth-confirm-password">Confirm Password</label>
+            <input type="password" id="auth-confirm-password" required />
+          </div>
+          <p id="auth-signup-error" style="color:#ef4444; font-size:0.85rem; margin-bottom:1rem; display:none;"></p>
+          <button type="submit" class="btn" style="width:100%;">Create Account</button>
+        </form>
+
+        <div id="auth-loading" style="display:none; text-align:center; padding:1rem;">
+          <span style="color:var(--primary);">Processing...</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Image lightbox -->
     <div
       id="image-lightbox"

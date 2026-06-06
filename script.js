@@ -221,8 +221,8 @@ function setupWishlistButtons() {
 
     const user = getSessionUser();
     if (!user) {
-      // Redirect to signup/login - same as bid flow
-      showAuthRequiredModal("To add items to your wishlist, please log in or create an account.");
+      // Use inline auth modal instead of redirecting
+      openAuthModal();
       return;
     }
 
@@ -688,13 +688,23 @@ async function loadMarketplaceItems() {
   }
 }
 
+// Store pending bid item for after auth
+let pendingBidItem = null;
+
 function setupModalTriggers() {
   document.querySelectorAll(".open-bid-modal-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       const user = getSessionUser();
       if (!user) {
-        alert("Please login to place a bid.");
-        window.location.href = "login.html";
+        // Store the bid item info for after auth
+        pendingBidItem = {
+          id: btn.getAttribute("data-id"),
+          name: btn.getAttribute("data-name"),
+          price: parseFloat(btn.getAttribute("data-price")),
+          highest: parseFloat(btn.getAttribute("data-highest"))
+        };
+        // Show inline auth modal instead of redirecting
+        openAuthModal();
         return;
       }
 
@@ -721,6 +731,201 @@ function setupModalTriggers() {
   });
 }
 
+// ─── Inline Auth Modal Functions ────────────────────────────────────────────
+
+function openAuthModal() {
+  const modal = document.getElementById("auth-modal");
+  if (!modal) return;
+
+  // Reset forms
+  document.getElementById("auth-login-form").style.display = "block";
+  document.getElementById("auth-signup-form").style.display = "none";
+  document.getElementById("auth-login-error").style.display = "none";
+  document.getElementById("auth-signup-error").style.display = "none";
+  document.getElementById("auth-loading").style.display = "none";
+
+  // Clear inputs
+  ["auth-username", "auth-password", "auth-new-username", "auth-new-email",
+   "auth-new-mobile", "auth-new-password", "auth-confirm-password"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+
+  // Set login tab as active
+  document.getElementById("tab-login").classList.add("active");
+  document.getElementById("tab-login").style.color = "var(--primary)";
+  document.getElementById("tab-login").style.borderBottom = "2px solid var(--primary)";
+  document.getElementById("tab-signup").classList.remove("active");
+  document.getElementById("tab-signup").style.color = "#64748b";
+  document.getElementById("tab-signup").style.borderBottom = "none";
+
+  modal.style.display = "flex";
+}
+
+function closeAuthModal() {
+  const modal = document.getElementById("auth-modal");
+  if (modal) modal.style.display = "none";
+  pendingBidItem = null;
+}
+
+// Tab switching
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("tab-login")?.addEventListener("click", () => {
+    document.getElementById("auth-login-form").style.display = "block";
+    document.getElementById("auth-signup-form").style.display = "none";
+    document.getElementById("tab-login").classList.add("active");
+    document.getElementById("tab-login").style.color = "var(--primary)";
+    document.getElementById("tab-login").style.borderBottom = "2px solid var(--primary)";
+    document.getElementById("tab-signup").classList.remove("active");
+    document.getElementById("tab-signup").style.color = "#64748b";
+    document.getElementById("tab-signup").style.borderBottom = "none";
+    document.getElementById("auth-login-error").style.display = "none";
+  });
+
+  document.getElementById("tab-signup")?.addEventListener("click", () => {
+    document.getElementById("auth-login-form").style.display = "none";
+    document.getElementById("auth-signup-form").style.display = "block";
+    document.getElementById("tab-signup").classList.add("active");
+    document.getElementById("tab-signup").style.color = "var(--primary)";
+    document.getElementById("tab-signup").style.borderBottom = "2px solid var(--primary)";
+    document.getElementById("tab-login").classList.remove("active");
+    document.getElementById("tab-login").style.color = "#64748b";
+    document.getElementById("tab-login").style.borderBottom = "none";
+    document.getElementById("auth-signup-error").style.display = "none";
+  });
+
+  // Close button
+  document.getElementById("auth-modal-close")?.addEventListener("click", closeAuthModal);
+
+  // Inline Login Form Handler
+  document.getElementById("auth-login-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const username = document.getElementById("auth-username").value.trim();
+    const password = document.getElementById("auth-password").value;
+    const errorEl = document.getElementById("auth-login-error");
+    const loadingEl = document.getElementById("auth-loading");
+
+    errorEl.style.display = "none";
+    loadingEl.style.display = "block";
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await res.json();
+      loadingEl.style.display = "none";
+
+      if (res.ok) {
+        // Login successful - store session
+        sessionStorage.setItem("sello_user", JSON.stringify(data.user));
+        sessionStorage.setItem("sello_token", data.token);
+
+        closeAuthModal();
+        setupNavbar();
+
+        // If there was a pending bid, open the bid modal
+        if (pendingBidItem) {
+          openBidModalFromItem(pendingBidItem);
+          pendingBidItem = null;
+        }
+      } else {
+        errorEl.textContent = data.message || "Login failed. Please try again.";
+        errorEl.style.display = "block";
+      }
+    } catch (err) {
+      loadingEl.style.display = "none";
+      errorEl.textContent = "Connection error. Please try again.";
+      errorEl.style.display = "block";
+    }
+  });
+
+  // Inline Signup Form Handler
+  document.getElementById("auth-signup-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const username = document.getElementById("auth-new-username").value.trim();
+    const email = document.getElementById("auth-new-email").value.trim();
+    const mobile = document.getElementById("auth-new-mobile").value.trim();
+    const password = document.getElementById("auth-new-password").value;
+    const confirmPassword = document.getElementById("auth-confirm-password").value;
+    const errorEl = document.getElementById("auth-signup-error");
+    const loadingEl = document.getElementById("auth-loading");
+
+    errorEl.style.display = "none";
+
+    if (password !== confirmPassword) {
+      errorEl.textContent = "Passwords do not match.";
+      errorEl.style.display = "block";
+      return;
+    }
+
+    loadingEl.style.display = "block";
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, mobile, password }),
+      });
+
+      const data = await res.json();
+      loadingEl.style.display = "none";
+
+      if (res.ok) {
+        // Signup successful - auto login
+        const loginRes = await fetch(`${API_BASE_URL}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+
+        if (loginRes.ok) {
+          const loginData = await loginRes.json();
+          sessionStorage.setItem("sello_user", JSON.stringify(loginData.user));
+          sessionStorage.setItem("sello_token", loginData.token);
+
+          closeAuthModal();
+          setupNavbar();
+
+          // If there was a pending bid, open the bid modal
+          if (pendingBidItem) {
+            openBidModalFromItem(pendingBidItem);
+            pendingBidItem = null;
+          }
+        } else {
+          // Signup succeeded but auto-login failed - switch to login tab
+          showToast("Account created! Please login.");
+          document.getElementById("tab-login").click();
+          document.getElementById("auth-username").value = username;
+        }
+      } else {
+        errorEl.textContent = data.message || "Signup failed. Please try again.";
+        errorEl.style.display = "block";
+      }
+    } catch (err) {
+      loadingEl.style.display = "none";
+      errorEl.textContent = "Connection error. Please try again.";
+      errorEl.style.display = "block";
+    }
+  });
+});
+
+function openBidModalFromItem(item) {
+  currentTargetBidId = item.id;
+  const highestBidValue = item.highest > 0 ? item.highest : item.price;
+  const dynamicDefaultValue = highestBidValue > 0 ? highestBidValue + 1.0 : item.price;
+
+  document.getElementById("modal-item-name").innerText = item.name;
+  document.getElementById("modal-item-price").innerText = `HK$${item.price.toFixed(2)}`;
+  document.getElementById("modal-highest-bid").innerText =
+    highestBidValue > 0 ? `HK$${highestBidValue.toFixed(2)}` : "None";
+  document.getElementById("bid-amount").value = dynamicDefaultValue.toFixed(2);
+
+  document.getElementById("bid-modal").style.display = "flex";
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   document
     .querySelectorAll("#modal-cancel-btn, #modal-cancel-btn-button")
@@ -736,9 +941,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const user = getSessionUser();
       const amount = parseFloat(document.getElementById("bid-amount").value);
 
-      // RESTORED: Preserves your precise logic check parameters untouched
       if (isNaN(amount) || amount <= 0) {
-        alert("Please enter a valid bid amount.");
+        showToast("Please enter a valid bid amount.");
         return;
       }
 
@@ -747,21 +951,24 @@ document.addEventListener("DOMContentLoaded", () => {
           `${API_BASE_URL}/items/book/${currentTargetBidId}`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user: user.username, bidAmount: amount }),
+            headers: {
+              "Content-Type": "application/json",
+              ...getAuthHeaders()
+            },
+            body: JSON.stringify({ bidAmount: amount }),
           },
         );
 
         const data = await res.json();
         if (res.ok) {
-          alert("Bid placed successfully!");
+          showToast("Bid placed successfully!");
           document.getElementById("bid-modal").style.display = "none";
           loadMarketplaceItems();
         } else {
-          alert(data.message || "Failed to place bid.");
+          showToast(data.message || "Failed to place bid.");
         }
       } catch (err) {
-        alert("Error connecting to server.");
+        showToast("Error connecting to server.");
       }
     });
 });
