@@ -430,6 +430,107 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// ─── Forgot Password ───────────────────────────────────────────────────────
+
+// In-memory store for reset codes (key: email, value: { code, expiresAt })
+const resetCodes = new Map();
+
+// Clean up expired codes every 15 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [email, data] of resetCodes.entries()) {
+    if (data.expiresAt < now) {
+      resetCodes.delete(email);
+    }
+  }
+}, 15 * 60 * 1000);
+
+// POST /api/auth/forgot-password - Send reset code to email
+app.post("/api/auth/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required." });
+    }
+
+    const users = await readData(USERS_FILE);
+    const user = users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+
+    if (!user) {
+      // Don't reveal if email exists or not for security
+      return res.json({ message: "If that email exists, a reset code has been sent." });
+    }
+
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    // Store code
+    resetCodes.set(email.toLowerCase(), { code, expiresAt });
+
+    // Send email with code
+    sendMail({
+      to: email,
+      subject: `[Sello] Password Reset Code`,
+      text: `Your password reset code is: ${code}\n\nThis code is valid for 10 minutes. If you didn't request this, please ignore this email.\n\n- Sello Team`,
+    });
+
+    res.json({ message: "If that email exists, a reset code has been sent." });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to process request." });
+  }
+});
+
+// POST /api/auth/reset-password - Verify code and reset password
+app.post("/api/auth/reset-password", async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ message: "Email, code, and new password are required." });
+    }
+
+    const stored = resetCodes.get(email.toLowerCase());
+    if (!stored) {
+      return res.status(400).json({ message: "Invalid or expired reset code. Please request a new one." });
+    }
+
+    if (stored.expiresAt < Date.now()) {
+      resetCodes.delete(email.toLowerCase());
+      return res.status(400).json({ message: "Reset code has expired. Please request a new one." });
+    }
+
+    if (stored.code !== code) {
+      return res.status(400).json({ message: "Invalid reset code." });
+    }
+
+    // Code valid - update password
+    const users = await readData(USERS_FILE);
+    const userIndex = users.findIndex((u) => u.email?.toLowerCase() === email.toLowerCase());
+
+    if (userIndex === -1) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Update password (both hash and encrypted copy)
+    setUserPassword(users[userIndex], newPassword);
+    await writeData(USERS_FILE, users);
+
+    // Invalidate the code
+    resetCodes.delete(email.toLowerCase());
+
+    // Log activity
+    await logActivity("password_reset", `Password reset for: ${users[userIndex].username}`, {
+      user: users[userIndex].username,
+    });
+
+    res.json({ message: "Password has been reset successfully. Please login with your new password." });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to reset password." });
+  }
+});
+
 // READ MARKETPLACE ITEMS (public — only enabled items, sensitive fields stripped)
 app.get("/api/items", async (req, res) => {
   try {
