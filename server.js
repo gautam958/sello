@@ -502,7 +502,7 @@ app.post("/api/items/book/:id", async (req, res) => {
         Importance: "high",
       },
       html: `
-        <h2>Marketplace Booking & Bidding Activity Log</h2>
+        <h2>Sello Marketplace Booking & Bidding Activity Log</h2>
         <hr/>
         <p><strong>Product Name:</strong> ${target.name}</p>
         <p><strong>Base Price Value:</strong> HK$${target.price}</p>
@@ -555,7 +555,7 @@ const notifyBooking = async (item, bookedUser) => {
     <p><strong>Price:</strong> HK$${parseFloat(item.price).toFixed(2)}</p>
     <p><strong>Booked For:</strong> ${bookedUser}</p>
     <p>Pickup is from Tung Chung (Coastal Skyline). Detailed instructions will follow.
-       Pickup must be before 16-June-2026.</p>
+       Pickup must be before 16-June-2026. please whatsapp/call to 53451910</p>
   `;
   sendMail({
     to: OWNER_EMAIL,

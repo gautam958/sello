@@ -33,6 +33,13 @@ Pages) talking to a Node API (Azure Web App).
 
 - **Marketplace listing** — public grid of enabled items with image, description, price
   (in **HK$**), live bid count, and an availability status badge (`index.html`).
+- **Marketplace filters & randomized order** — a filter bar sits above the item grid with a
+  **search** input (matches name + description), a **status** dropdown (All / Available /
+  Booked), a **sort** dropdown (Default / Price ↑ / Price ↓ / Most Bids / Name A→Z), and a
+  **Reset** button. By default the first item from the server is pinned as a **featured**
+  card at the top and the remaining items are shuffled on every page load (Fisher–Yates), so
+  items that would otherwise sit at the bottom regularly surface near the top. Choosing any
+  explicit sort overrides the random order; Reset restores the featured + shuffled view.
 - **Status badge** — each card shows an _Available_ (green) or _Booked_ (red) badge overlaid
   on the item image. Booked items cannot be bid on.
 - **Image lightbox** — clicking any item image opens a full-size popup overlay.
@@ -310,15 +317,15 @@ curl -X POST http://localhost:3000/api/items/book/1 \
 
 ## Frontend Pages
 
-| Page            | Purpose                                                                                   |
-| --------------- | ----------------------------------------------------------------------------------------- |
-| `index.html`    | Marketplace grid; opens the bid modal (login required to bid).                            |
-| `login.html`    | Sign in; admins are redirected to `admin.html`, users to `index.html`.                    |
-| `signup.html`   | Register a new account (mobile number + client-side password confirmation).               |
-| `admin.html`    | Product CRUD, image upload, visibility toggle, bid history, and status/booking.           |
-| `users.html`    | **Manage Users** (admin only): create/edit/delete users + viewable passwords (show/hide). |
-| `logs.html`     | **Logs** (admin only): activity audit trail with type filter, refresh, and clear.         |
-| `visitors.html` | **Visitors** (admin only): visitor analytics with KPI cards, geo, and device breakdown.   |
+| Page            | Purpose                                                                                                                                          |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `index.html`    | Marketplace grid with filter bar (search, status, sort, reset); first item featured, rest shuffled; opens the bid modal (login required to bid). |
+| `login.html`    | Sign in; admins are redirected to `admin.html`, users to `index.html`.                                                                           |
+| `signup.html`   | Register a new account (mobile number + client-side password confirmation).                                                                      |
+| `admin.html`    | Product CRUD, image upload, visibility toggle, bid history, and status/booking.                                                                  |
+| `users.html`    | **Manage Users** (admin only): create/edit/delete users + viewable passwords (show/hide).                                                        |
+| `logs.html`     | **Logs** (admin only): activity audit trail with type filter, refresh, and clear.                                                                |
+| `visitors.html` | **Visitors** (admin only): visitor analytics with KPI cards, geo, and device breakdown.                                                          |
 
 Each page calls `initApp("<page>")`, which wires up the navbar and the page-specific logic in
 `script.js`. The **Manage Users**, **Logs**, and **Visitors** links appear in the top menu

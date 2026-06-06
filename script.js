@@ -171,6 +171,124 @@ function setupNavbar() {
 // ---------------- MARKET PLACE VIEW ENGINE ----------------
 let currentTargetBidId = null;
 
+let __allMarketItems = [];
+let __featuredItemId = null;
+
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function applyItemFilters() {
+  const searchEl = document.getElementById("filter-search");
+  const statusEl = document.getElementById("filter-status");
+  const sortEl = document.getElementById("filter-sort");
+  const search = (searchEl?.value || "").trim().toLowerCase();
+  const status = statusEl?.value || "all";
+  const sort = sortEl?.value || "default";
+
+  let list = __allMarketItems.filter((item) => {
+    if (status !== "all" && (item.status || "Available") !== status)
+      return false;
+    if (search) {
+      const hay = `${item.name || ""} ${item.description || ""}`.toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  if (sort === "price-asc") {
+    list.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+  } else if (sort === "price-desc") {
+    list.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+  } else if (sort === "bids-desc") {
+    list.sort((a, b) => (b.bidsCount || 0) - (a.bidsCount || 0));
+  } else if (sort === "name-asc") {
+    list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  } else {
+    // default: pin featured item on top, shuffle the rest randomly
+    const featured = list.find((i) => i.id === __featuredItemId);
+    const rest = list.filter((i) => i.id !== __featuredItemId);
+    const shuffled = shuffleArray(rest);
+    list = featured ? [featured, ...shuffled] : shuffled;
+  }
+
+  renderMarketplaceItems(list);
+}
+
+function renderMarketplaceItems(visibleItems) {
+  const grid = document.getElementById("items-grid");
+  if (!grid) return;
+
+  if (visibleItems.length === 0) {
+    grid.innerHTML = "<p>No items match your filters.</p>";
+    return;
+  }
+
+  grid.innerHTML = visibleItems
+    .map((item) => {
+      const topBidValue = item.highestBid || 0;
+      const processingBaselinePrice = item.price;
+
+      const imgSrc = resolveImageSrc(
+        item.image,
+        "https://placehold.co/600x400?text=No+Image",
+      );
+
+      const isBooked = item.status === "Booked";
+      const statusClass = isBooked ? "status-booked" : "status-available";
+      const statusLabel = isBooked ? "Booked" : "Available";
+
+      return `
+        <div class="card">
+            <div class="card-img-wrapper">
+              <img src="${imgSrc}" alt="${item.name}" class="card-img" data-full="${imgSrc}" onerror="this.src='https://placehold.co/600x400?text=No+Image'; this.onerror=null;">
+              <span class="status-badge ${statusClass}">${statusLabel}</span>
+            </div>
+            <div class="card-content">
+                <h3 class="card-title">${item.name}</h3>
+                <p class="card-desc">${item.description}</p>
+                <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Bids: ${item.bidsCount || 0}</p>
+                <div class="card-footer">
+                    <span class="price">HK$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
+                    ${
+                      isBooked
+                        ? '<button class="btn" disabled style="opacity:0.5;cursor:default;">Booked</button>'
+                        : `<button class="btn open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">Book / Place Bid</button>`
+                    }
+                </div>
+            </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  setupModalTriggers();
+  setupImageLightbox();
+}
+
+function setupItemFilterControls() {
+  const search = document.getElementById("filter-search");
+  const status = document.getElementById("filter-status");
+  const sort = document.getElementById("filter-sort");
+  const reset = document.getElementById("filter-reset");
+  if (!search || search.dataset.bound === "1") return;
+  search.dataset.bound = "1";
+  search.addEventListener("input", applyItemFilters);
+  status.addEventListener("change", applyItemFilters);
+  sort.addEventListener("change", applyItemFilters);
+  reset.addEventListener("click", () => {
+    search.value = "";
+    status.value = "all";
+    sort.value = "default";
+    applyItemFilters();
+  });
+}
+
 async function loadMarketplaceItems() {
   const grid = document.getElementById("items-grid");
   if (!grid) return;
@@ -178,55 +296,12 @@ async function loadMarketplaceItems() {
   try {
     const response = await fetch(`${API_BASE_URL}/items`);
     const items = await response.json();
-    const visibleItems = items;
+    __allMarketItems = Array.isArray(items) ? items : [];
+    // Pin the first item from the server response as the featured one.
+    __featuredItemId = __allMarketItems.length ? __allMarketItems[0].id : null;
 
-    if (visibleItems.length === 0) {
-      grid.innerHTML = "<p>No items available at the moment.</p>";
-      return;
-    }
-
-    grid.innerHTML = visibleItems
-      .map((item) => {
-        const topBidValue = item.highestBid || 0;
-        // Card footer always shows the fixed base price (admin-managed);
-        // bids never overwrite it.
-        const processingBaselinePrice = item.price;
-
-        const imgSrc = resolveImageSrc(
-          item.image,
-          "https://placehold.co/600x400?text=No+Image",
-        );
-
-        const isBooked = item.status === "Booked";
-        const statusClass = isBooked ? "status-booked" : "status-available";
-        const statusLabel = isBooked ? "Booked" : "Available";
-
-        return `
-          <div class="card">
-              <div class="card-img-wrapper">
-                <img src="${imgSrc}" alt="${item.name}" class="card-img" data-full="${imgSrc}" onerror="this.src='https://placehold.co/600x400?text=No+Image'; this.onerror=null;">
-                <span class="status-badge ${statusClass}">${statusLabel}</span>
-              </div>
-              <div class="card-content">
-                  <h3 class="card-title">${item.name}</h3>
-                  <p class="card-desc">${item.description}</p>
-                  <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Bids: ${item.bidsCount || 0}</p>
-                  <div class="card-footer">
-                      <span class="price">HK$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
-                      ${
-                        isBooked
-                          ? '<button class="btn" disabled style="opacity:0.5;cursor:default;">Booked</button>'
-                          : `<button class="btn open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">Book / Place Bid</button>`
-                      }
-                  </div>
-              </div>
-          </div>
-        `;
-      })
-      .join("");
-
-    setupModalTriggers();
-    setupImageLightbox();
+    setupItemFilterControls();
+    applyItemFilters();
   } catch (err) {
     grid.innerHTML =
       '<p style="color: var(--danger-color);">Failed to load items.</p>';
