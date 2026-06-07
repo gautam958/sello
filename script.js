@@ -1075,53 +1075,87 @@ async function loadAdminDashboard() {
 
   const cancelBtn = document.getElementById("form-cancel-btn");
 
+  let __adminAllItems = [];
+
+  const renderAdminItemsTable = (items) => {
+    tableBody.innerHTML = items
+      .map((item) => {
+        const topBidValue = getMaxBidFromArray(item.bids);
+        const historyRows =
+          item.bids && item.bids.length > 0
+            ? item.bids
+                .map(
+                  (b) =>
+                    `<div style="border-bottom: 1px dashed #ccc; padding: 2px;">${b.userId}: HK$${b.bidAmount}</div>`,
+                )
+                .join("")
+            : "No bids yet";
+
+        const adminImgSrc = resolveImageSrc(
+          item.image,
+          "https://placehold.co/50?text=No+Img",
+        );
+
+        return `
+          <tr>
+              <td><img src="${adminImgSrc}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'; this.onerror=null;"></td>
+              <td>${item.name}</td>
+              <td>${item.description}</td>
+              <td>HK$${parseFloat(item.price).toFixed(2)}</td>
+              <td>HK$${parseFloat(topBidValue).toFixed(2)}</td>
+              <td><span class="status-badge ${
+            item.status === "Booked" ? "status-booked" :
+            item.status === "Pickup Scheduled" ? "status-pickup" :
+            item.status === "Sold" ? "status-sold" : "status-available"
+          }" style="font-size:0.75rem;padding:2px 8px;">${item.status || "Available"}</span>${item.bookedUser ? " → " + item.bookedUser : ""}</td>
+              <td>${item.enabled ? "Enabled" : "Disabled"}</td>
+              <td>${historyRows}</td>
+              <td class="actions-cell">
+                  <button class="btn admin-edit-btn" data-id="${item.id}" style="background-color: #eab308; padding: 0.25rem 0.5rem; font-size: 0.8rem;">Edit</button>
+                  <button class="btn admin-del-btn" data-id="${item.id}" style="background-color: var(--danger-color); padding: 0.25rem 0.5rem; font-size: 0.8rem;">Delete</button>
+              </td>
+          </tr>
+        `;
+      })
+      .join("");
+  };
+
+  const filterAdminItems = () => {
+    const search = document.getElementById("admin-items-search")?.value.toLowerCase() || "";
+    const statusFilter = document.getElementById("admin-items-filter-status")?.value || "all";
+    const visibilityFilter = document.getElementById("admin-items-filter-visibility")?.value || "all";
+
+    const filtered = __adminAllItems.filter(item => {
+      const matchesSearch = !search || 
+        item.name.toLowerCase().includes(search) || 
+        item.description.toLowerCase().includes(search);
+      const matchesStatus = statusFilter === "all" || item.status === statusFilter;
+      const matchesVisibility = visibilityFilter === "all" || 
+        (visibilityFilter === "Enabled" && item.enabled) ||
+        (visibilityFilter === "Disabled" && !item.enabled);
+      return matchesSearch && matchesStatus && matchesVisibility;
+    });
+
+    renderAdminItemsTable(filtered);
+  };
+
   const fetchAdminItems = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/admin/items`, {
         headers: getAuthHeaders(),
       });
       const items = await res.json();
+      __adminAllItems = items;
+      renderAdminItemsTable(items);
 
-      tableBody.innerHTML = items
-        .map((item) => {
-          const topBidValue = getMaxBidFromArray(item.bids);
-          const historyRows =
-            item.bids && item.bids.length > 0
-              ? item.bids
-                  .map(
-                    (b) =>
-                      `<div style="border-bottom: 1px dashed #ccc; padding: 2px;">${b.userId}: HK$${b.bidAmount}</div>`,
-                  )
-                  .join("")
-              : "No bids yet";
-
-          const adminImgSrc = resolveImageSrc(
-            item.image,
-            "https://placehold.co/50?text=No+Img",
-          );
-
-          return `
-            <tr>
-                <td><img src="${adminImgSrc}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;" onerror="this.src='https://placehold.co/50?text=No+Img'; this.onerror=null;"></td>
-                <td>${item.name}</td>
-                <td>${item.description}</td>
-                <td>HK$${parseFloat(item.price).toFixed(2)}</td>
-                <td>HK$${parseFloat(topBidValue).toFixed(2)}</td>
-                <td><span class="status-badge ${
-            item.status === "Booked" ? "status-booked" :
-            item.status === "Pickup Scheduled" ? "status-pickup" :
-            item.status === "Sold" ? "status-sold" : "status-available"
-          }" style="font-size:0.75rem;padding:2px 8px;">${item.status || "Available"}</span>${item.bookedUser ? " → " + item.bookedUser : ""}</td>
-                <td>${item.enabled ? "Enabled" : "Disabled"}</td>
-                <td>${historyRows}</td>
-                <td class="actions-cell">
-                    <button class="btn admin-edit-btn" data-id="${item.id}" style="background-color: #eab308; padding: 0.25rem 0.5rem; font-size: 0.8rem;">Edit</button>
-                    <button class="btn admin-del-btn" data-id="${item.id}" style="background-color: var(--danger-color); padding: 0.25rem 0.5rem; font-size: 0.8rem;">Delete</button>
-                </td>
-            </tr>
-          `;
-        })
-        .join("");
+      // Add filter event listeners
+      document.getElementById("admin-items-search")?.addEventListener("input", filterAdminItems);
+      document.getElementById("admin-items-filter-status")?.addEventListener("change", filterAdminItems);
+      document.getElementById("admin-items-filter-visibility")?.addEventListener("change", filterAdminItems);
+    } catch (e) {
+      tableBody.innerHTML = '<tr><td colspan="9" style="color:red;">Failed to load items.</td></tr>';
+    }
+  };
 
       document
         .querySelectorAll(".admin-edit-btn")

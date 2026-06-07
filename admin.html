@@ -98,6 +98,21 @@
       </div>
 
       <h2 style="margin-top: 3rem">Inventory Management</h2>
+      <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <input type="text" id="admin-items-search" placeholder="Search name or description..." style="padding:0.5rem; flex:1; min-width:200px;">
+        <select id="admin-items-filter-status" style="padding:0.5rem;">
+          <option value="all">All Status</option>
+          <option value="Available">Available</option>
+          <option value="Booked">Booked</option>
+          <option value="Pickup Scheduled">Pickup Scheduled</option>
+          <option value="Sold">Sold</option>
+        </select>
+        <select id="admin-items-filter-visibility" style="padding:0.5rem;">
+          <option value="all">All Visibility</option>
+          <option value="Enabled">Enabled</option>
+          <option value="Disabled">Disabled</option>
+        </select>
+      </div>
       <div style="overflow-x: auto">
         <table class="admin-table">
           <thead>
@@ -107,7 +122,7 @@
               <th>Description</th>
               <th>Price</th>
               <th>Highest Bid</th>
-              <th>Status</th>
+              <th>Current Status</th>
               <th>Visibility</th>
               <th>Bid History</th>
               <th>Actions</th>
