@@ -937,8 +937,8 @@ app.post(
   async (req, res) => {
     try {
       const items = await readData(ITEMS_FILE);
-      const status = req.body.status === "Booked" ? "Booked" : "Available";
-      const bookedUser = status === "Booked" ? req.body.bookedUser || "" : "";
+      const status = req.body.status || "Available";
+      const bookedUser = (status === "Booked" || status === "Pickup Scheduled") ? req.body.bookedUser || "" : "";
       const newItem = {
         id: Date.now().toString(),
         name: req.body.name,
@@ -996,8 +996,8 @@ app.put(
       if (idx === -1)
         return res.status(404).json({ message: "Item profile missing." });
 
-      const status = req.body.status === "Booked" ? "Booked" : "Available";
-      const bookedUser = status === "Booked" ? req.body.bookedUser || "" : "";
+      const status = req.body.status || "Available";
+      const bookedUser = (status === "Booked" || status === "Pickup Scheduled") ? req.body.bookedUser || "" : "";
       const updatedFields = {
         name: req.body.name,
         description: req.body.description,
