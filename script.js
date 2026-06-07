@@ -1245,7 +1245,7 @@ async function initAdminStatusControls() {
   }
 
   const toggle = () => {
-    const show = statusSel.value === "Booked" || statusSel.value === "Pickup Scheduled";
+    const show = statusSel.value === "Booked" || statusSel.value === "Pickup Scheduled" || statusSel.value === "Sold";
     bookedGroup.style.display = show ? "" : "none";
     bookedUserSel.required = show;
   };

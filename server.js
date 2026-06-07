@@ -938,7 +938,7 @@ app.post(
     try {
       const items = await readData(ITEMS_FILE);
       const status = req.body.status || "Available";
-      const bookedUser = (status === "Booked" || status === "Pickup Scheduled") ? req.body.bookedUser || "" : "";
+      const bookedUser = (status === "Booked" || status === "Pickup Scheduled" || status === "Sold") ? req.body.bookedUser || "" : "";
       const newItem = {
         id: Date.now().toString(),
         name: req.body.name,
@@ -997,7 +997,7 @@ app.put(
         return res.status(404).json({ message: "Item profile missing." });
 
       const status = req.body.status || "Available";
-      const bookedUser = (status === "Booked" || status === "Pickup Scheduled") ? req.body.bookedUser || "" : "";
+      const bookedUser = (status === "Booked" || status === "Pickup Scheduled" || status === "Sold") ? req.body.bookedUser || "" : "";
       const updatedFields = {
         name: req.body.name,
         description: req.body.description,
