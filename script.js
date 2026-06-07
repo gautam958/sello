@@ -1157,24 +1157,18 @@ async function loadAdminDashboard() {
     }
   };
 
-      document
-        .querySelectorAll(".admin-edit-btn")
-        .forEach((b) =>
-          b.addEventListener("click", () =>
-            populateEditForm(items, b.getAttribute("data-id")),
-          ),
-        );
-      document
-        .querySelectorAll(".admin-del-btn")
-        .forEach((b) =>
-          b.addEventListener("click", () =>
-            deleteItem(b.getAttribute("data-id"), fetchAdminItems),
-          ),
-        );
-    } catch (err) {
-      console.error("Failed to fetch admin items.");
+  // Event delegation for admin table buttons (buttons are rendered dynamically)
+  document.addEventListener("click", (e) => {
+    if (e.target.classList.contains("admin-edit-btn")) {
+      const itemId = e.target.getAttribute("data-id");
+      const item = __adminAllItems.find(i => i.id === itemId);
+      if (item) populateEditForm(item);
     }
-  };
+    if (e.target.classList.contains("admin-del-btn")) {
+      const itemId = e.target.getAttribute("data-id");
+      deleteItem(itemId, fetchAdminItems);
+    }
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1229,8 +1223,9 @@ async function loadAdminDashboard() {
   fetchAdminItems();
 }
 
-function populateEditForm(items, id) {
-  const item = items.find((i) => i.id === id);
+function populateEditForm(itemOrItems, id) {
+  // Support both: populateEditForm(item) or populateEditForm(items, id)
+  const item = id ? itemOrItems.find((i) => i.id === id) : itemOrItems;
   if (!item) return;
 
   document.getElementById("item-id").value = item.id;
