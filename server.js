@@ -606,9 +606,10 @@ app.get(
         `,
       });
 
-      // Redirect with token
-      const separator = returnUrl.includes("?") ? "&" : "?";
-      res.redirect(`${returnUrl}${separator}google_token=${token}&google_user=${encodeURIComponent(JSON.stringify(cleanUser))}`);
+      // Redirect with token (ensure absolute path)
+      const safeReturnUrl = returnUrl.startsWith("/") ? returnUrl : `/${returnUrl}`;
+      const separator = safeReturnUrl.includes("?") ? "&" : "?";
+      res.redirect(`${safeReturnUrl}${separator}google_token=${token}&google_user=${encodeURIComponent(JSON.stringify(cleanUser))}`);
     } catch (err) {
       console.error("Google OAuth callback error:", err);
       res.redirect("/login.html?error=google_auth_error");
