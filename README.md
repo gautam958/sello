@@ -51,6 +51,9 @@ Pages) talking to a Node API (Azure Web App).
   bid is the current highest bid + 1 (or the base price if there are no bids yet).
 - **Authentication** — username/password signup and login, with a **mandatory mobile number**
   on signup. Two roles: `user` and `admin`.
+- **Google OAuth SSO** — users can sign in with their Google account. Supports both traditional
+  deployments and cross-origin setups (GitHub Pages → Azure API). Uses OAuth state parameter for
+  reliable return URL handling across domains.
 - **Server-side auth & role checks** — login issues an HMAC-SHA256 signed token that the
   frontend stores in `sessionStorage` and sends as `Authorization: Bearer <token>`. Every
   admin route is verified server-side by middleware (`authenticate` + `requireAdmin`), so
@@ -126,6 +129,8 @@ Pages) talking to a Node API (Azure Web App).
 | File I/O    | `fs-extra`                                                        |
 | Uploads     | `multer` (disk storage)                                           |
 | Email       | `nodemailer` (Gmail service)                                      |
+| Auth        | `passport.js` + `passport-google-oauth20` (Google OAuth SSO)      |
+| Session     | `express-session`                                                 |
 | CORS        | `cors`                                                            |
 | Frontend    | Vanilla HTML, CSS, and JavaScript (no framework, no bundler)      |
 | Persistence | Flat JSON files (`users.json`, `items.json`) + local image folder |
@@ -231,29 +236,37 @@ npx serve .        # then open the printed URL
 A few values are currently hard-coded and should be turned into environment variables before
 production use:
 
-Email is configured through **environment variables** (with safe placeholder defaults so the
-app still boots without real credentials — emails are simply logged on failure):
+Email and authentication are configured through **environment variables** (with safe placeholder defaults so the app still boots without real credentials):
 
-| Setting                 | Env var            | Default                        | Notes                                                                                             |
-| ----------------------- | ------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------- |
-| Gmail account           | `EMAIL_USER`       | `your-email-address@gmail.com` | Gmail address used as the sender.                                                                 |
-| Gmail app password      | `EMAIL_PASS`       | `your-app-password`            | Gmail [App Password](https://support.google.com/accounts/answer/185833), not your login password. |
-| Notification recipient  | `OWNER_EMAIL`      | `gautam958@gmail.com`          | Receives login / bid / booking notifications.                                                     |
-| Auth token secret       | `AUTH_SECRET`      | `sello-dev-secret-change-me`   | Signs/verifies login tokens (HMAC-SHA256). Set a strong value in production.                      |
-| Password encryption key | `PASSWORD_ENC_KEY` | falls back to `AUTH_SECRET`    | Key for the AES-256-GCM reversible password copy used by the admin screen.                        |
-| Server port             | `PORT`             | `3000`                         | `server.js` (`process.env.PORT`).                                                                 |
+| Setting                  | Env var              | Default                        | Notes                                                                                             |
+| ------------------------ | -------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------- |
+| Gmail account            | `EMAIL_USER`         | `your-email-address@gmail.com` | Gmail address used as the sender.                                                                 |
+| Gmail app password       | `EMAIL_PASS`         | `your-app-password`            | Gmail [App Password](https://support.google.com/accounts/answer/185833), not your login password. |
+| Notification recipient   | `OWNER_EMAIL`        | `gautam958@gmail.com`          | Receives login / bid / booking notifications.                                                     |
+| Auth token secret        | `AUTH_SECRET`        | `sello-dev-secret-change-me`   | Signs/verifies login tokens (HMAC-SHA256). Set a strong value in production.                      |
+| Password encryption key  | `PASSWORD_ENC_KEY`   | falls back to `AUTH_SECRET`    | Key for the AES-256-GCM reversible password copy used by the admin screen.                        |
+| Session secret           | `SESSION_SECRET`     | auto-generated                 | For OAuth session management. Set a strong value in production.                                    |
+| Azure base URL           | `AZURE_BASE_URL`     | (none)                         | Your Azure App Service URL (e.g., `https://sello-xxx.azurewebsites.net`). Used for CORS and cookies. |
+| Server port              | `PORT`               | `3000`                         | `server.js` (`process.env.PORT`).                                                                 |
 
-Other values still hard-coded:
+**Google OAuth Configuration:**
 
-| Setting        | Location                     | Notes                                         |
-| -------------- | ---------------------------- | --------------------------------------------- |
-| CORS origin    | `server.js`                  | Locked to `https://gautam958.github.io`.      |
-| Hosted API URL | `script.js` (`API_BASE_URL`) | Azure URL used when served from GitHub Pages. |
+| Setting           | Env var                | Notes                                                                      |
+| ----------------- | ---------------------- | -------------------------------------------------------------------------- |
+| Client ID         | `GOOGLE_CLIENT_ID`     | From [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
+| Client Secret     | `GOOGLE_CLIENT_SECRET` | From Google Cloud Console                                                   |
+| Callback URL      | `GOOGLE_CALLBACK_URL`   | Must match exactly what's registered in Google Cloud Console               |
+
+For Google OAuth, you need to:
+1. Create OAuth 2.0 credentials in Google Cloud Console
+2. Set authorized redirect URI to your callback URL (e.g., `https://your-app.azurewebsites.net/auth/google/callback`)
+3. Upload app branding icon (256x256 PNG) in OAuth consent screen settings
+4. Add test users to skip consent screen during development
 
 To enable real email delivery, start the server with the credentials set, e.g.:
 
 ```bash
-EMAIL_USER=you@gmail.com EMAIL_PASS="your app password" OWNER_EMAIL=you@gmail.com npm start
+EMAIL_USER=you@gmail.com EMAIL_PASS="your app password" npm start
 ```
 
 ## Data Model
