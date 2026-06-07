@@ -576,9 +576,7 @@ app.get(
         return res.redirect("/login.html?error=google_auth_failed");
       }
 
-      // Get return URL from session
-      const returnUrl = req.session.oauthReturnUrl || "index.html";
-      console.log("[Google OAuth] Redirecting to:", returnUrl);
+      // Get return URL from session (done later after logging)
 
       // Generate token for the user
       const cleanUser = { ...req.user };
@@ -600,6 +598,7 @@ app.get(
       // Get return URL from session or default to index.html
       const returnUrl = req.session.oauthReturnUrl || "index.html";
       delete req.session.oauthReturnUrl;
+      console.log("[Google OAuth] Redirecting to:", returnUrl);
 
       // Notify owner
       sendMail({
