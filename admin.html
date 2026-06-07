@@ -20,14 +20,14 @@
           >🚚 Move‑Out Sale! All items pickup from Coastal Skyline, Tung Chung –
           all bids are considered and once owner confirm you will received
           detailed instructions on your email, signup and book your items,
-          pickup before 16 June 2026.</span
+          pickup before 14 June 2026.</span
         >
         <span id="marquee-countdown-end"></span>
       </span>
     </div>
 
-    <main class="container">
-      <h2>Add / Update Product Item</h2>
+    <main class="container container--wide">
+      <h2 style="margin-bottom: 0.5rem">Add / Update Product Item</h2>
       <div class="form-container" style="max-width: 100%; margin: 1.5rem 0">
         <form id="product-form" enctype="multipart/form-data">
           <input type="hidden" id="item-id" />
@@ -103,23 +103,22 @@
       </div>
 
       <h2 style="margin-top: 3rem">Inventory Management</h2>
-      <div
-        style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap"
-      >
-        <input
-          type="text"
-          id="admin-items-search"
-          placeholder="Search name or description..."
-          style="padding: 0.5rem; flex: 1; min-width: 200px"
-        />
-        <select id="admin-items-filter-status" style="padding: 0.5rem">
+      <div class="filter-bar">
+        <div class="filter-search">
+          <input
+            type="text"
+            id="admin-items-search"
+            placeholder="Search name or description..."
+          />
+        </div>
+        <select id="admin-items-filter-status">
           <option value="all">All Status</option>
           <option value="Available">Available</option>
           <option value="Booked">Booked</option>
           <option value="Pickup Scheduled">Pickup Scheduled</option>
           <option value="Sold">Sold</option>
         </select>
-        <select id="admin-items-filter-visibility" style="padding: 0.5rem">
+        <select id="admin-items-filter-visibility">
           <option value="all">All Visibility</option>
           <option value="Enabled">Enabled</option>
           <option value="Disabled">Disabled</option>

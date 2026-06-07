@@ -20,13 +20,13 @@
           >🚚 Move‑Out Sale! All items pickup from Coastal Skyline, Tung Chung –
           all bids are considered and once owner confirm you will received
           detailed instructions on your email, signup and book your items,
-          pickup before 16 June 2026.</span
+          pickup before 14 June 2026.</span
         >
         <span id="marquee-countdown-end"></span>
       </span>
     </div>
 
-    <main class="container">
+    <main class="container container--wide">
       <h2 style="margin: 0 0 1rem">Wishlist Management</h2>
       <p style="color: #64748b; margin: 0.25rem 0 1.5rem">
         Track user interest and follow up via email.
@@ -61,6 +61,20 @@
         </div>
       </div>
 
+      <div class="filter-bar">
+        <div class="filter-search">
+          <input
+            type="text"
+            id="wishlist-search"
+            placeholder="Search item, user, email..."
+          />
+        </div>
+        <select id="wishlist-filter-status">
+          <option value="all">All Email Status</option>
+          <option value="sent">Email Sent</option>
+          <option value="pending">Not Sent</option>
+        </select>
+      </div>
       <div style="overflow-x: auto">
         <table class="admin-table">
           <thead>
@@ -135,26 +149,6 @@
     </div>
 
     <style>
-      .kpi-card {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 0.75rem;
-        padding: 0.85rem 1rem;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-      }
-      .kpi-label {
-        color: #64748b;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin-bottom: 0.25rem;
-      }
-      .kpi-value {
-        font-size: 1.6rem;
-        font-weight: 700;
-        color: #0f172a;
-        line-height: 1;
-      }
       .contact-btn {
         padding: 0.4rem 0.8rem;
         font-size: 0.85rem;
@@ -253,6 +247,57 @@ Sello Team`;
           }
         });
 
+      let __wishlistCache = [];
+
+      function renderWishlistTable(data) {
+        const tbody = document.getElementById("wishlist-table");
+        const searchEl = document.getElementById("wishlist-search");
+        const statusEl = document.getElementById("wishlist-filter-status");
+        const search = searchEl ? searchEl.value.toLowerCase().trim() : "";
+        const statusFilter = statusEl ? statusEl.value : "all";
+
+        let filtered = data;
+        if (search) {
+          filtered = filtered.filter((w) => {
+            const hay =
+              `${w.itemName || ""} ${w.userId || ""} ${w.userEmail || ""} ${w.userMobile || ""}`.toLowerCase();
+            return hay.includes(search);
+          });
+        }
+        if (statusFilter === "sent") {
+          filtered = filtered.filter((w) => w.emailSentAt);
+        } else if (statusFilter === "pending") {
+          filtered = filtered.filter((w) => !w.emailSentAt);
+        }
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#94a3b8;">No wishlists match these filters.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = filtered
+          .map(
+            (w) => `
+            <tr>
+              <td style="font-weight:600;">${escapeHtml(w.itemName)}</td>
+              <td>${escapeHtml(w.userId)}</td>
+              <td><a href="mailto:${escapeHtml(w.userEmail)}">${escapeHtml(w.userEmail)}</a></td>
+              <td>${escapeHtml(w.userMobile || "—")}</td>
+              <td>HK$${parseFloat(w.itemPrice).toFixed(2)}</td>
+              <td style="font-size:0.85rem;color:#64748b;">${new Date(w.addedAt).toLocaleString()}</td>
+              <td style="font-size:0.85rem;">${w.emailSentAt ? '<span style="color:#22c55e;">✅ ' + new Date(w.emailSentAt).toLocaleString() + "</span>" : '<span style="color:#94a3b8;">—</span>'}</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="btn contact-btn" onclick="openContactModal('${w.id}', '${escapeHtml(w.itemName)}', '${escapeHtml(w.userId)}', '${escapeHtml(w.userEmail)}', '${escapeHtml(w.userMobile || "")}', '${w.itemPrice}', '${w.itemStatus || "Available"}')">📧 Contact</button>
+                  <button class="btn" style="background-color:#ef4444;padding:0.4rem 0.8rem;font-size:0.85rem;" onclick="deleteWishlist('${w.id}')">Delete</button>
+                </div>
+              </td>
+            </tr>
+          `,
+          )
+          .join("");
+      }
+
       async function loadWishlistData() {
         const tbody = document.getElementById("wishlist-table");
         const kpiTotal = document.getElementById("kpi-total");
@@ -270,13 +315,13 @@ Sello Team`;
           }
 
           const data = await res.json();
+          __wishlistCache = data;
 
           // Update KPIs
           kpiTotal.textContent = data.length;
           const uniqueUsers = new Set(data.map((w) => w.userId)).size;
           kpiUsers.textContent = uniqueUsers;
 
-          // Find top item
           const itemCounts = {};
           data.forEach((w) => {
             itemCounts[w.itemName] = (itemCounts[w.itemName] || 0) + 1;
@@ -288,32 +333,7 @@ Sello Team`;
             ? `${topItem[0]} (${topItem[1]})`
             : "—";
 
-          if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#94a3b8;">No wishlists yet.</td></tr>`;
-            return;
-          }
-
-          tbody.innerHTML = data
-            .map(
-              (w) => `
-            <tr>
-              <td style="font-weight:600;">${escapeHtml(w.itemName)}</td>
-              <td>${escapeHtml(w.userId)}</td>
-              <td><a href="mailto:${escapeHtml(w.userEmail)}">${escapeHtml(w.userEmail)}</a></td>
-              <td>${escapeHtml(w.userMobile || "—")}</td>
-              <td>HK$${parseFloat(w.itemPrice).toFixed(2)}</td>
-              <td style="font-size:0.85rem;color:#64748b;">${new Date(w.addedAt).toLocaleString()}</td>
-              <td style="font-size:0.85rem;">${w.emailSentAt ? '<span style="color:#22c55e;">✅ ' + new Date(w.emailSentAt).toLocaleString() + "</span>" : '<span style="color:#94a3b8;">—</span>'}</td>
-              <td>
-                <div class="actions-cell">
-                  <button class="btn contact-btn" onclick="openContactModal('${w.id}', '${escapeHtml(w.itemName)}', '${escapeHtml(w.userId)}', '${escapeHtml(w.userEmail)}', '${escapeHtml(w.userMobile || "")}', '${w.itemPrice}', '${w.itemStatus || "Available"}')">📧 Contact</button>
-                  <button class="btn" style="background-color:#ef4444;padding:0.4rem 0.8rem;font-size:0.85rem;" onclick="deleteWishlist('${w.id}')">Delete</button>
-                </div>
-              </td>
-            </tr>
-          `,
-            )
-            .join("");
+          renderWishlistTable(data);
         } catch (err) {
           tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#ef4444;">Error loading wishlists.</td></tr>`;
         }
@@ -340,6 +360,16 @@ Sello Team`;
       document
         .getElementById("refresh-btn")
         .addEventListener("click", loadWishlistData);
+
+      // Filter event listeners
+      document
+        .getElementById("wishlist-search")
+        ?.addEventListener("input", () => renderWishlistTable(__wishlistCache));
+      document
+        .getElementById("wishlist-filter-status")
+        ?.addEventListener("change", () =>
+          renderWishlistTable(__wishlistCache),
+        );
 
       // Load on page load
       loadWishlistData();

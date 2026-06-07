@@ -15,14 +15,48 @@
 
     <div class="marquee">
       <span id="marquee-wrapper">
-        <span id="marquee-countdown"></span>
-        <span>🚚 Move‑Out Sale! All items pickup from Coastal Skyline, Tung Chung – all bids are considered and once owner confirm you will received detailed instructions on your email, signup and book your items, pickup before 16 June 2026.</span>
-        <span id="marquee-countdown-end"></span>
+        <span
+          >🚚 Move‑Out Sale! All items pickup from Coastal Skyline, Tung Chung –
+          all bids are considered and once owner confirm you will received
+          detailed instructions on your email, signup and book your items,
+          pickup before 14 June 2026.</span
+        >
       </span>
     </div>
 
     <main class="container">
-      <h2 style="margin: 0 0 1rem">Available Items</h2>
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 1rem;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+        "
+      >
+        <h2 style="margin: 0">Available Items</h2>
+        <div
+          id="countdown-badge"
+          style="
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            padding: 0.5rem 1.1rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 0.875rem;
+            letter-spacing: -0.01em;
+            box-shadow: 0 2px 12px rgba(99, 102, 241, 0.3);
+            white-space: nowrap;
+          "
+        >
+          <span style="font-size: 1rem">⏰</span>
+          <span id="countdown-text"></span>
+        </div>
+      </div>
       <div id="items-filters" class="filter-bar">
         <div class="filter-search">
           <input
@@ -103,34 +137,88 @@
 
     <!-- Inline Auth Modal (Login + Signup tabs) -->
     <div id="auth-modal" class="bid-modal" style="display: none">
-      <div class="modal-content" style="max-width: 420px;">
+      <div class="modal-content" style="max-width: 420px">
         <span class="close-btn" id="auth-modal-close">&times;</span>
-        <h2 style="margin-bottom: 0.5rem;">Welcome!</h2>
-        <p style="color: #64748b; margin-bottom: 1.5rem; font-size: 0.9rem;">Login or create an account to place your bid</p>
+        <h2 style="margin-bottom: 0.5rem">Welcome!</h2>
+        <p style="color: #64748b; margin-bottom: 1.5rem; font-size: 0.9rem">
+          Login or create an account to place your bid
+        </p>
 
         <!-- Google Sign-In Button -->
-        <a href="#" class="google-btn" id="google-auth-btn" data-auth-url="/auth/google">
+        <a
+          href="#"
+          class="google-btn"
+          id="google-auth-btn"
+          data-auth-url="/auth/google"
+        >
           <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            <path
+              fill="#4285F4"
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+            />
+            <path
+              fill="#EA4335"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+            />
           </svg>
           <span>Sign in with Google</span>
         </a>
-        
+
         <div class="divider">
           <span>or</span>
         </div>
 
         <!-- Tabs -->
-        <div style="display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem;">
-          <button id="tab-login" class="auth-tab active" style="flex:1; padding:0.75rem; border:none; background:none; font-weight:600; color:var(--primary); border-bottom:2px solid var(--primary); cursor:pointer;">Login</button>
-          <button id="tab-signup" class="auth-tab" style="flex:1; padding:0.75rem; border:none; background:none; font-weight:600; color:#64748b; cursor:pointer;">Sign Up</button>
+        <div
+          style="
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 1.5rem;
+          "
+        >
+          <button
+            id="tab-login"
+            class="auth-tab active"
+            style="
+              flex: 1;
+              padding: 0.75rem;
+              border: none;
+              background: none;
+              font-weight: 600;
+              color: var(--primary);
+              border-bottom: 2px solid var(--primary);
+              cursor: pointer;
+            "
+          >
+            Login
+          </button>
+          <button
+            id="tab-signup"
+            class="auth-tab"
+            style="
+              flex: 1;
+              padding: 0.75rem;
+              border: none;
+              background: none;
+              font-weight: 600;
+              color: #64748b;
+              cursor: pointer;
+            "
+          >
+            Sign Up
+          </button>
         </div>
 
         <!-- Login Form -->
-        <form id="auth-login-form" style="display: block;">
+        <form id="auth-login-form" style="display: block">
           <div class="form-group">
             <label for="auth-username">Username</label>
             <input type="text" id="auth-username" required />
@@ -139,12 +227,20 @@
             <label for="auth-password">Password</label>
             <input type="password" id="auth-password" required />
           </div>
-          <p id="auth-login-error" style="color:#ef4444; font-size:0.85rem; margin-bottom:1rem; display:none;"></p>
-          <button type="submit" class="btn" style="width:100%;">Login</button>
+          <p
+            id="auth-login-error"
+            style="
+              color: #ef4444;
+              font-size: 0.85rem;
+              margin-bottom: 1rem;
+              display: none;
+            "
+          ></p>
+          <button type="submit" class="btn" style="width: 100%">Login</button>
         </form>
 
         <!-- Signup Form -->
-        <form id="auth-signup-form" style="display: none;">
+        <form id="auth-signup-form" style="display: none">
           <div class="form-group">
             <label for="auth-new-username">Username</label>
             <input type="text" id="auth-new-username" required />
@@ -165,12 +261,25 @@
             <label for="auth-confirm-password">Confirm Password</label>
             <input type="password" id="auth-confirm-password" required />
           </div>
-          <p id="auth-signup-error" style="color:#ef4444; font-size:0.85rem; margin-bottom:1rem; display:none;"></p>
-          <button type="submit" class="btn" style="width:100%;">Create Account</button>
+          <p
+            id="auth-signup-error"
+            style="
+              color: #ef4444;
+              font-size: 0.85rem;
+              margin-bottom: 1rem;
+              display: none;
+            "
+          ></p>
+          <button type="submit" class="btn" style="width: 100%">
+            Create Account
+          </button>
         </form>
 
-        <div id="auth-loading" style="display:none; text-align:center; padding:1rem;">
-          <span style="color:var(--primary);">Processing...</span>
+        <div
+          id="auth-loading"
+          style="display: none; text-align: center; padding: 1rem"
+        >
+          <span style="color: var(--primary)">Processing...</span>
         </div>
       </div>
     </div>

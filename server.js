@@ -39,8 +39,11 @@ app.use((req, res, next) => {
 });
 
 // Session configuration for OAuth flow
-const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
-const isProduction = process.env.NODE_ENV === "production" || AZURE_URL.includes(".azurewebsites.net");
+const SESSION_SECRET =
+  process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+const isProduction =
+  process.env.NODE_ENV === "production" ||
+  AZURE_URL.includes(".azurewebsites.net");
 app.use(
   session({
     secret: SESSION_SECRET,
@@ -51,7 +54,7 @@ app.use(
       httpOnly: true,
       maxAge: 10 * 60 * 1000, // 10 minutes (just for OAuth flow)
     },
-  })
+  }),
 );
 
 app.use(express.json());
@@ -139,12 +142,16 @@ transporter.verify((err) => {
 // ─── Google OAuth Configuration ─────────────────────────────────────────────
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
-const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || "http://localhost:3000/auth/google/callback";
+const GOOGLE_CALLBACK_URL =
+  process.env.GOOGLE_CALLBACK_URL ||
+  "http://localhost:3000/auth/google/callback";
 
 if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   console.log("Google OAuth credentials configured.");
 } else {
-  console.warn("Google OAuth NOT configured: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required.");
+  console.warn(
+    "Google OAuth NOT configured: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required.",
+  );
 }
 
 // Passport initialization
@@ -163,19 +170,22 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
         try {
           // Get existing users
           const users = await readData(USERS_FILE);
-          
+
           // Check if user already exists with this Google ID
           let user = users.find((u) => u.googleId === profile.id);
-          
+
           if (user) {
             // Update last login
             user.lastLogin = new Date().toISOString();
             await writeData(USERS_FILE, users);
             return done(null, user);
           }
-          
+
           // Create new Google user
-          const username = profile.displayName.replace(/\s+/g, "_").toLowerCase() + "_" + Date.now().toString(36);
+          const username =
+            profile.displayName.replace(/\s+/g, "_").toLowerCase() +
+            "_" +
+            Date.now().toString(36);
           const newUser = {
             id: Date.now().toString(36) + Math.random().toString(36).slice(2),
             username: username,
@@ -189,17 +199,17 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
             createdAt: new Date().toISOString(),
             lastLogin: new Date().toISOString(),
           };
-          
+
           users.push(newUser);
           await writeData(USERS_FILE, users);
-          
+
           return done(null, newUser);
         } catch (err) {
           console.error("Google OAuth error:", err);
           return done(err, null);
         }
-      }
-    )
+      },
+    ),
   );
 
   // Serialize user for session
@@ -539,31 +549,29 @@ app.post("/api/login", async (req, res) => {
 // ─── Google OAuth Routes ─────────────────────────────────────────────────────
 
 // GET /auth/google - Initiate Google OAuth flow
-app.get(
-  "/auth/google",
-  (req, res, next) => {
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-      return res.status(503).json({ 
-        message: "Google OAuth is not configured. Please contact the administrator." 
-      });
-    }
-    
-    // Get return URL from query, default to index.html
-    const returnUrl = req.query.return || "index.html";
-    
-    // Store in session as backup
-    req.session.oauthReturnUrl = returnUrl;
-    
-    // Encode return URL in state parameter (more reliable than session)
-    const state = Buffer.from(JSON.stringify({ returnUrl })).toString("base64");
-    
-    passport.authenticate("google", {
-      scope: ["profile", "email"],
-      prompt: "select_account",
-      state: state,
-    })(req, res, next);
+app.get("/auth/google", (req, res, next) => {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    return res.status(503).json({
+      message:
+        "Google OAuth is not configured. Please contact the administrator.",
+    });
   }
-);
+
+  // Get return URL from query, default to index.html
+  const returnUrl = req.query.return || "index.html";
+
+  // Store in session as backup
+  req.session.oauthReturnUrl = returnUrl;
+
+  // Encode return URL in state parameter (more reliable than session)
+  const state = Buffer.from(JSON.stringify({ returnUrl })).toString("base64");
+
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    prompt: "select_account",
+    state: state,
+  })(req, res, next);
+});
 
 // GET /auth/google/callback - Handle OAuth callback
 app.get(
@@ -575,7 +583,9 @@ app.get(
     }
     next();
   },
-  passport.authenticate("google", { failureRedirect: "/login.html?error=google_auth_failed" }),
+  passport.authenticate("google", {
+    failureRedirect: "/login.html?error=google_auth_failed",
+  }),
   async (req, res) => {
     try {
       if (!req.user) {
@@ -586,7 +596,9 @@ app.get(
       let returnUrl = "index.html";
       if (req.query.state) {
         try {
-          const stateData = JSON.parse(Buffer.from(req.query.state, "base64").toString("utf8"));
+          const stateData = JSON.parse(
+            Buffer.from(req.query.state, "base64").toString("utf8"),
+          );
           returnUrl = stateData.returnUrl || "index.html";
           console.log("[Google OAuth] Return URL from state:", returnUrl);
         } catch (e) {
@@ -610,10 +622,14 @@ app.get(
       });
 
       // Log the login activity
-      await logActivity("google_login", `${cleanUser.username} logged in with Google`, {
-        user: cleanUser.username,
-        details: `googleId: ${cleanUser.googleId}`,
-      });
+      await logActivity(
+        "google_login",
+        `${cleanUser.username} logged in with Google`,
+        {
+          user: cleanUser.username,
+          details: `googleId: ${cleanUser.googleId}`,
+        },
+      );
 
       // Clean up session
       delete req.session.oauthReturnUrl;
@@ -635,15 +651,22 @@ app.get(
       // Redirect with token
       // If returnUrl is absolute URL (https://...), use it directly
       // Otherwise treat as relative path
-      const isAbsoluteUrl = returnUrl.startsWith("http://") || returnUrl.startsWith("https://");
-      const safeReturnUrl = isAbsoluteUrl ? returnUrl : (returnUrl.startsWith("/") ? returnUrl : `/${returnUrl}`);
+      const isAbsoluteUrl =
+        returnUrl.startsWith("http://") || returnUrl.startsWith("https://");
+      const safeReturnUrl = isAbsoluteUrl
+        ? returnUrl
+        : returnUrl.startsWith("/")
+          ? returnUrl
+          : `/${returnUrl}`;
       const separator = safeReturnUrl.includes("?") ? "&" : "?";
-      res.redirect(`${safeReturnUrl}${separator}google_token=${token}&google_user=${encodeURIComponent(JSON.stringify(cleanUser))}`);
+      res.redirect(
+        `${safeReturnUrl}${separator}google_token=${token}&google_user=${encodeURIComponent(JSON.stringify(cleanUser))}`,
+      );
     } catch (err) {
       console.error("Google OAuth callback error:", err);
       res.redirect("/login.html?error=google_auth_error");
     }
-  }
+  },
 );
 
 // ─── Forgot Password ───────────────────────────────────────────────────────
@@ -652,14 +675,17 @@ app.get(
 const resetCodes = new Map();
 
 // Clean up expired codes every 15 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [email, data] of resetCodes.entries()) {
-    if (data.expiresAt < now) {
-      resetCodes.delete(email);
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [email, data] of resetCodes.entries()) {
+      if (data.expiresAt < now) {
+        resetCodes.delete(email);
+      }
     }
-  }
-}, 15 * 60 * 1000);
+  },
+  15 * 60 * 1000,
+);
 
 // POST /api/auth/forgot-password - Send reset code to email
 app.post("/api/auth/forgot-password", async (req, res) => {
@@ -671,11 +697,15 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     }
 
     const users = await readData(USERS_FILE);
-    const user = users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+    const user = users.find(
+      (u) => u.email?.toLowerCase() === email.toLowerCase(),
+    );
 
     if (!user) {
       // Don't reveal if email exists or not for security
-      return res.json({ message: "If that email exists, a reset code has been sent." });
+      return res.json({
+        message: "If that email exists, a reset code has been sent.",
+      });
     }
 
     // Generate 6-digit code
@@ -704,17 +734,25 @@ app.post("/api/auth/reset-password", async (req, res) => {
     const { email, code, newPassword } = req.body;
 
     if (!email || !code || !newPassword) {
-      return res.status(400).json({ message: "Email, code, and new password are required." });
+      return res
+        .status(400)
+        .json({ message: "Email, code, and new password are required." });
     }
 
     const stored = resetCodes.get(email.toLowerCase());
     if (!stored) {
-      return res.status(400).json({ message: "Invalid or expired reset code. Please request a new one." });
+      return res
+        .status(400)
+        .json({
+          message: "Invalid or expired reset code. Please request a new one.",
+        });
     }
 
     if (stored.expiresAt < Date.now()) {
       resetCodes.delete(email.toLowerCase());
-      return res.status(400).json({ message: "Reset code has expired. Please request a new one." });
+      return res
+        .status(400)
+        .json({ message: "Reset code has expired. Please request a new one." });
     }
 
     if (stored.code !== code) {
@@ -723,7 +761,9 @@ app.post("/api/auth/reset-password", async (req, res) => {
 
     // Code valid - update password
     const users = await readData(USERS_FILE);
-    const userIndex = users.findIndex((u) => u.email?.toLowerCase() === email.toLowerCase());
+    const userIndex = users.findIndex(
+      (u) => u.email?.toLowerCase() === email.toLowerCase(),
+    );
 
     if (userIndex === -1) {
       return res.status(404).json({ message: "User not found." });
@@ -737,11 +777,18 @@ app.post("/api/auth/reset-password", async (req, res) => {
     resetCodes.delete(email.toLowerCase());
 
     // Log activity
-    await logActivity("password_reset", `Password reset for: ${users[userIndex].username}`, {
-      user: users[userIndex].username,
-    });
+    await logActivity(
+      "password_reset",
+      `Password reset for: ${users[userIndex].username}`,
+      {
+        user: users[userIndex].username,
+      },
+    );
 
-    res.json({ message: "Password has been reset successfully. Please login with your new password." });
+    res.json({
+      message:
+        "Password has been reset successfully. Please login with your new password.",
+    });
   } catch (err) {
     res.status(500).json({ message: "Failed to reset password." });
   }
@@ -775,7 +822,7 @@ app.get("/api/recent-bids", async (req, res) => {
   try {
     const items = await readData(ITEMS_FILE);
     const recentBids = [];
-    
+
     for (const item of items) {
       if (item.bids && item.bids.length > 0) {
         for (const bid of item.bids) {
@@ -790,16 +837,16 @@ app.get("/api/recent-bids", async (req, res) => {
         }
       }
     }
-    
+
     // Shuffle bids randomly for variety (Fisher-Yates shuffle)
     for (let i = recentBids.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [recentBids[i], recentBids[j]] = [recentBids[j], recentBids[i]];
     }
-    
+
     // Take top 5 from shuffled array
     const topBids = recentBids.slice(0, 5);
-    
+
     res.json(topBids);
   } catch (err) {
     res.status(500).json({ message: "Unable to fetch recent bids." });
@@ -1155,7 +1202,12 @@ app.post(
     try {
       const items = await readData(ITEMS_FILE);
       const status = req.body.status || "Available";
-      const bookedUser = (status === "Booked" || status === "Pickup Scheduled" || status === "Sold") ? req.body.bookedUser || "" : "";
+      const bookedUser =
+        status === "Booked" ||
+        status === "Pickup Scheduled" ||
+        status === "Sold"
+          ? req.body.bookedUser || ""
+          : "";
       const newItem = {
         id: Date.now().toString(),
         name: req.body.name,
@@ -1214,7 +1266,12 @@ app.put(
         return res.status(404).json({ message: "Item profile missing." });
 
       const status = req.body.status || "Available";
-      const bookedUser = (status === "Booked" || status === "Pickup Scheduled" || status === "Sold") ? req.body.bookedUser || "" : "";
+      const bookedUser =
+        status === "Booked" ||
+        status === "Pickup Scheduled" ||
+        status === "Sold"
+          ? req.body.bookedUser || ""
+          : "";
       const updatedFields = {
         name: req.body.name,
         description: req.body.description,
@@ -1242,14 +1299,12 @@ app.put(
         (previous.status !== "Booked" || previous.bookedUser !== bookedUser);
 
       // Detect status transitions for notifications
-      const becamePickupScheduled = 
-        status === "Pickup Scheduled" && 
-        previous.status !== "Pickup Scheduled" && 
+      const becamePickupScheduled =
+        status === "Pickup Scheduled" &&
+        previous.status !== "Pickup Scheduled" &&
         bookedUser;
-      const becameSold = 
-        status === "Sold" && 
-        previous.status !== "Sold" && 
-        bookedUser;
+      const becameSold =
+        status === "Sold" && previous.status !== "Sold" && bookedUser;
 
       items[idx] = { ...items[idx], ...updatedFields };
       await writeData(ITEMS_FILE, items);
@@ -1270,15 +1325,23 @@ app.put(
       }
       if (becamePickupScheduled) {
         await notifyPickupScheduled(items[idx], bookedUser);
-        await logActivity("pickup_scheduled", `"${items[idx].name}" pickup scheduled for ${bookedUser}`, {
-          user: req.auth.username,
-        });
+        await logActivity(
+          "pickup_scheduled",
+          `"${items[idx].name}" pickup scheduled for ${bookedUser}`,
+          {
+            user: req.auth.username,
+          },
+        );
       }
       if (becameSold) {
         await notifySold(items[idx], bookedUser);
-        await logActivity("sold", `"${items[idx].name}" sold to ${bookedUser}`, {
-          user: req.auth.username,
-        });
+        await logActivity(
+          "sold",
+          `"${items[idx].name}" sold to ${bookedUser}`,
+          {
+            user: req.auth.username,
+          },
+        );
       }
       res.json(items[idx]);
     } catch (error) {
@@ -1348,10 +1411,13 @@ const getClientIp = (req) => {
     req.headers["x-azure-clientip"], // Azure App Service
     req.ip,
   ];
-  
+
   for (const h of headers) {
     if (h) {
-      const ip = String(h).split(",")[0].trim().replace(/^::ffff:/, "");
+      const ip = String(h)
+        .split(",")[0]
+        .trim()
+        .replace(/^::ffff:/, "");
       if (ip && ip !== "127.0.0.1" && ip !== "::1") {
         return ip;
       }
@@ -1445,7 +1511,12 @@ const parseUA = (ua = "") => {
 // Body: { visitorId, path, referrer, computerName }
 app.post("/api/track", async (req, res) => {
   try {
-    const { visitorId, path: visitedPath, referrer, computerName } = req.body || {};
+    const {
+      visitorId,
+      path: visitedPath,
+      referrer,
+      computerName,
+    } = req.body || {};
     if (!visitorId || typeof visitorId !== "string" || visitorId.length > 64) {
       return res.status(400).json({ message: "Invalid visitorId." });
     }
@@ -1589,7 +1660,7 @@ app.post("/api/wishlist", authenticate, async (req, res) => {
     if (!item) return res.status(404).json({ message: "Item not found." });
 
     const wishlist = await readData(WISHLIST_FILE);
-    
+
     // Check if already wishlisted
     const existing = wishlist.find(
       (w) => w.userId === req.auth.username && w.itemId === itemId,
@@ -1653,16 +1724,19 @@ app.post("/api/admin/wishlist/contact", requireAdmin, async (req, res) => {
   try {
     const { wishlistId, message } = req.body;
     if (!wishlistId || !message) {
-      return res.status(400).json({ message: "Wishlist ID and message required." });
+      return res
+        .status(400)
+        .json({ message: "Wishlist ID and message required." });
     }
 
     const wishlist = await readData(WISHLIST_FILE);
     const entry = wishlist.find((w) => w.id === wishlistId);
-    if (!entry) return res.status(404).json({ message: "Wishlist entry not found." });
+    if (!entry)
+      return res.status(404).json({ message: "Wishlist entry not found." });
 
     const items = await readData(ITEMS_FILE);
     const item = items.find((i) => i.id === entry.itemId);
-    
+
     const itemPrice = item ? item.price : entry.itemPrice;
     const itemBids = item?.bids?.length || 0;
     const itemHighest = item?.highestBid || 0;
@@ -1688,7 +1762,7 @@ Sello Team`;
       to: entry.userEmail,
       cc: OWNER_EMAIL,
       subject: `Inquiry about your wishlisted item: ${entry.itemName}`,
-      text: emailBody,
+      text: "",
     });
 
     // Update wishlist entry with email sent timestamp
