@@ -22,9 +22,11 @@ const PORT = process.env.PORT || 3000;
 //     credentials: true,
 //   }),
 // );
+const AZURE_URL = process.env.AZURE_BASE_URL || "";
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowed = ["https://gautam958.github.io", "http://localhost:3000"];
+  if (AZURE_URL) allowed.push(AZURE_URL);
   if (allowed.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
@@ -38,13 +40,14 @@ app.use((req, res, next) => {
 
 // Session configuration for OAuth flow
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+const isProduction = process.env.NODE_ENV === "production" || AZURE_URL.includes(".azurewebsites.net");
 app.use(
   session({
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: true, // Required for HTTPS
+      secure: isProduction, // true for HTTPS (Azure), false for HTTP (local dev)
       httpOnly: true,
       maxAge: 10 * 60 * 1000, // 10 minutes (just for OAuth flow)
     },
