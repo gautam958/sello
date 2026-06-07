@@ -216,18 +216,36 @@ nav #logout-btn:hover,
   box-shadow: none;
 }
 
-/* Disabled Sold button styling */
-.btn-sold-disabled {
-  background-color: var(--danger) !important;
-  color: #ffffff !important;
-  opacity: 0.85;
-  cursor: default !important;
+/* Disabled status buttons - matching badge colors */
+.btn-status-sold,
+.btn-status-pickup-scheduled,
+.btn-status-booked,
+.btn-status-available {
+  cursor: default;
   border: none;
+  opacity: 0.85;
 }
 
-.btn-sold-disabled:hover {
-  transform: none !important;
-  box-shadow: none !important;
+.btn-status-sold {
+  background-color: #ef4444;
+  color: #ffffff;
+}
+
+.btn-status-booked {
+  background-color: #ca8a04;
+  color: #ffffff;
+}
+
+.btn-status-pickup-scheduled {
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+
+.btn-status-sold:hover,
+.btn-status-booked:hover,
+.btn-status-pickup-scheduled:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 /* Core Form Group Field Design Parameters */
@@ -952,18 +970,30 @@ h2 {
   margin-bottom: 0.15rem;
 }
 
-.live-bid-sold-badge {
+/* Live bids status badges */
+.live-bid-status-badge {
   display: inline-block;
   font-size: 0.6rem;
   font-weight: 700;
   text-transform: uppercase;
   color: #ffffff;
-  background: var(--danger);
   padding: 2px 6px;
   border-radius: 4px;
   margin-left: 0.4rem;
   vertical-align: middle;
   letter-spacing: 0.03em;
+}
+
+.live-bid-status-sold {
+  background: var(--danger);
+}
+
+.live-bid-status-booked {
+  background: #ca8a04;
+}
+
+.live-bid-status-pickup-scheduled {
+  background: #3b82f6;
 }
 
 .live-bid-name {

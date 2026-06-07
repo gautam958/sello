@@ -369,14 +369,15 @@ function renderLiveBids(bids, container) {
         bid.itemImage,
         "https://placehold.co/80x60?text=No+Image",
       );
-      const soldBadge = bid.itemStatus === "Sold" 
-        ? `<span class="live-bid-sold-badge">SOLD</span>` 
+      // Status badge only for non-Available items
+      const statusBadge = bid.itemStatus && bid.itemStatus !== "Available" 
+        ? `<span class="live-bid-status-badge live-bid-status-${bid.itemStatus.toLowerCase().replace(/\s+/g, '-')}">${bid.itemStatus.toUpperCase()}</span>` 
         : '';
       return `
     <div class="live-bid-item fade-in" style="animation-delay: ${index * 80}ms" onclick="scrollToItem('${bid.itemId}')">
       <img src="${imgSrc}" alt="${escapeHtml(bid.itemName)}" class="live-bid-img" onerror="this.src='https://placehold.co/80x60?text=No+Image'; this.onerror=null;">
       <div class="live-bid-content">
-        <div class="live-bid-amount">HK$ ${bid.amount.toLocaleString()} ${soldBadge}</div>
+        <div class="live-bid-amount">HK$ ${bid.amount.toLocaleString()} ${statusBadge}</div>
         <div class="live-bid-name">${escapeHtml(bid.itemName)}</div>
         <div class="live-bid-time">${formatTimeAgo(bid.timestamp)}</div>
       </div>
@@ -645,7 +646,7 @@ function renderMarketplaceItems(visibleItems) {
                     ${
                       canBid
                         ? `<button class="btn open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">Book / Place Bid</button>`
-                        : `<button class="btn btn-sold-disabled" disabled style="cursor:default;">${item.status}</button>`
+                        : `<button class="btn btn-status-${item.status.toLowerCase().replace(/\s+/g, '-')}" disabled>${item.status}</button>`
                     }
                 </div>
             </div>
