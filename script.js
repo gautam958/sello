@@ -4,6 +4,12 @@ const API_BASE_URL =
     ? "https://sello-bkh7dwd8avecbyd9.eastasia-01.azurewebsites.net/api"
     : "/api";
 
+// Auth base URL - same server but without /api
+const AUTH_BASE_URL =
+  window.location.origin === "https://gautam958.github.io"
+    ? "https://sello-bkh7dwd8avecbyd9.eastasia-01.azurewebsites.net"
+    : "";
+
 // Host that serves uploaded images. Images live at `/images`, a sibling of `/api`,
 // on the same server, so derive it by stripping the trailing `/api` from the API base.
 const ASSET_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "");
@@ -882,6 +888,21 @@ function closeAuthModal() {
 
 // Tab switching
 document.addEventListener("DOMContentLoaded", () => {
+  // Initialize Google Sign-In buttons with correct auth URL
+  ["google-signin-btn", "google-signup-btn"].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const authPath = btn.dataset.authUrl || "/auth/google";
+        // When on GitHub Pages, send full return URL; otherwise just path
+        const returnPath = window.location.pathname.replace(/\/[^\/]*$/, "/index.html");
+        const returnUrl = AUTH_BASE_URL ? `${window.location.origin}${returnPath}` : "index.html";
+        window.location.href = AUTH_BASE_URL + authPath + "?return=" + encodeURIComponent(returnUrl);
+      });
+    }
+  });
+
   document.getElementById("tab-login")?.addEventListener("click", () => {
     document.getElementById("auth-login-form").style.display = "block";
     document.getElementById("auth-signup-form").style.display = "none";
