@@ -548,13 +548,19 @@ app.get(
       });
     }
     
-    // Store the return URL (default to index.html)
+    // Get return URL from query, default to index.html
     const returnUrl = req.query.return || "index.html";
+    
+    // Store in session as backup
     req.session.oauthReturnUrl = returnUrl;
+    
+    // Encode return URL in state parameter (more reliable than session)
+    const state = Buffer.from(JSON.stringify({ returnUrl })).toString("base64");
     
     passport.authenticate("google", {
       scope: ["profile", "email"],
       prompt: "select_account",
+      state: state,
     })(req, res, next);
   }
 );
@@ -576,7 +582,21 @@ app.get(
         return res.redirect("/login.html?error=google_auth_failed");
       }
 
-      // Get return URL from session (done later after logging)
+      // Get return URL from state parameter (from callback) or session fallback
+      let returnUrl = "index.html";
+      if (req.query.state) {
+        try {
+          const stateData = JSON.parse(Buffer.from(req.query.state, "base64").toString("utf8"));
+          returnUrl = stateData.returnUrl || "index.html";
+          console.log("[Google OAuth] Return URL from state:", returnUrl);
+        } catch (e) {
+          console.log("[Google OAuth] Failed to parse state:", e.message);
+        }
+      }
+      if (returnUrl === "index.html" && req.session.oauthReturnUrl) {
+        returnUrl = req.session.oauthReturnUrl;
+        console.log("[Google OAuth] Return URL from session:", returnUrl);
+      }
 
       // Generate token for the user
       const cleanUser = { ...req.user };
@@ -595,8 +615,7 @@ app.get(
         details: `googleId: ${cleanUser.googleId}`,
       });
 
-      // Get return URL from session or default to index.html
-      const returnUrl = req.session.oauthReturnUrl || "index.html";
+      // Clean up session
       delete req.session.oauthReturnUrl;
       console.log("[Google OAuth] Redirecting to:", returnUrl);
 
