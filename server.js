@@ -563,6 +563,7 @@ app.get(
 app.get(
   "/auth/google/callback",
   (req, res, next) => {
+    console.log("[Google OAuth] Callback received, query:", req.query);
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
       return res.redirect("/login.html?error=google_oauth_not_configured");
     }
@@ -574,6 +575,10 @@ app.get(
       if (!req.user) {
         return res.redirect("/login.html?error=google_auth_failed");
       }
+
+      // Get return URL from session
+      const returnUrl = req.session.oauthReturnUrl || "index.html";
+      console.log("[Google OAuth] Redirecting to:", returnUrl);
 
       // Generate token for the user
       const cleanUser = { ...req.user };
