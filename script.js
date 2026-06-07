@@ -573,7 +573,7 @@ function setupNavbar() {
     html += `<button id="logout-btn" class="btn nav-logout">Logout</button>`;
   } else {
     html += link("login.html", "Login");
-    html += link("signup.html", "Register", "btn");
+    html += link("signup.html", "Register");
   }
   nav.innerHTML = html;
 
