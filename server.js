@@ -717,6 +717,61 @@ const notifyBooking = async (item, bookedUser) => {
   }
 };
 
+// Notify when item pickup is scheduled
+const notifyPickupScheduled = async (item, bookedUser) => {
+  if (!bookedUser) return;
+  const users = await readData(USERS_FILE);
+  const bookedEmail = findUserEmail(users, bookedUser);
+  const detail = `
+    <h2>Pickup Scheduled</h2>
+    <p><strong>Product:</strong> ${item.name}</p>
+    <p><strong>Price:</strong> HK$${parseFloat(item.highestBid).toFixed(2)}</p>
+    <p>Your pickup has been scheduled for ${item.name}.</p>
+    <p>Please bring sufficient cash and pickup before <strong>16-June-2026</strong>.<br/>
+       Pickup location: Coastal Skyline, Tung Chung (La Rossa B)</p>
+    <p>📞 For any help, call or WhatsApp: +852 53451910</p>
+  `;
+  sendMail({
+    to: OWNER_EMAIL,
+    subject: `Pickup scheduled: ${item.name} for ${bookedUser}`,
+    html: detail,
+  });
+  if (bookedEmail) {
+    sendMail({
+      to: bookedEmail,
+      subject: `Pickup scheduled for ${item.name}`,
+      html: detail,
+    });
+  }
+};
+
+// Notify when item is sold
+const notifySold = async (item, bookedUser) => {
+  if (!bookedUser) return;
+  const users = await readData(USERS_FILE);
+  const bookedEmail = findUserEmail(users, bookedUser);
+  const detail = `
+    <h2>🎉 Item Sold!</h2>
+    <p><strong>Product:</strong> ${item.name}</p>
+    <p><strong>Final Price:</strong> HK$${parseFloat(item.highestBid).toFixed(2)}</p>
+    <p>Congratulations! Your purchase of ${item.name} is complete.</p>
+    <p>Please pickup from Coastal Skyline, Tung Chung before <strong>16-June-2026</strong>.</p>
+    <p>📞 For any help, call or WhatsApp: +852 53451910</p>
+  `;
+  sendMail({
+    to: OWNER_EMAIL,
+    subject: `SOLD: ${item.name} to ${bookedUser}`,
+    html: detail,
+  });
+  if (bookedEmail) {
+    sendMail({
+      to: bookedEmail,
+      subject: `You purchased ${item.name} - Sold!`,
+      html: detail,
+    });
+  }
+};
+
 // ADMIN: LIST ALL ITEMS (full data — bids, enabled flag, etc.)
 app.get("/api/admin/items", requireAdmin, async (req, res) => {
   try {
@@ -969,6 +1024,16 @@ app.put(
         status === "Booked" &&
         (previous.status !== "Booked" || previous.bookedUser !== bookedUser);
 
+      // Detect status transitions for notifications
+      const becamePickupScheduled = 
+        status === "Pickup Scheduled" && 
+        previous.status !== "Pickup Scheduled" && 
+        bookedUser;
+      const becameSold = 
+        status === "Sold" && 
+        previous.status !== "Sold" && 
+        bookedUser;
+
       items[idx] = { ...items[idx], ...updatedFields };
       await writeData(ITEMS_FILE, items);
       await logActivity("item", `Admin updated item "${items[idx].name}"`, {
@@ -985,6 +1050,18 @@ app.put(
             details: `booked user: ${bookedUser}`,
           },
         );
+      }
+      if (becamePickupScheduled) {
+        await notifyPickupScheduled(items[idx], bookedUser);
+        await logActivity("pickup_scheduled", `"${items[idx].name}" pickup scheduled for ${bookedUser}`, {
+          user: req.auth.username,
+        });
+      }
+      if (becameSold) {
+        await notifySold(items[idx], bookedUser);
+        await logActivity("sold", `"${items[idx].name}" sold to ${bookedUser}`, {
+          user: req.auth.username,
+        });
       }
       res.json(items[idx]);
     } catch (error) {

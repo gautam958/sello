@@ -35,13 +35,17 @@ Pages) talking to a Node API (Azure Web App).
   (in **HK$**), live bid count, and an availability status badge (`index.html`).
 - **Marketplace filters & randomized order** — a filter bar sits above the item grid with a
   **search** input (matches name + description), a **status** dropdown (All / Available /
-  Booked), a **sort** dropdown (Default / Price ↑ / Price ↓ / Most Bids / Name A→Z), and a
-  **Reset** button. By default the first item from the server is pinned as a **featured**
-  card at the top and the remaining items are shuffled on every page load (Fisher–Yates), so
-  items that would otherwise sit at the bottom regularly surface near the top. Choosing any
-  explicit sort overrides the random order; Reset restores the featured + shuffled view.
-- **Status badge** — each card shows an _Available_ (green) or _Booked_ (red) badge overlaid
-  on the item image. Booked items cannot be bid on.
+  Booked / Pickup Scheduled / Sold), a **sort** dropdown (Default / Price ↑ / Price ↓ / 
+  Most Bids / Name A→Z), and a **Reset** button. By default the first item from the server 
+  is pinned as a **featured** card at the top and the remaining items are shuffled on every 
+  page load (Fisher–Yates), so items that would otherwise sit at the bottom regularly surface 
+  near the top. Choosing any explicit sort overrides the random order; Reset restores the 
+  featured + shuffled view.
+- **Status badge** — each card shows a colored badge overlaid on the item image:
+  - _Available_ (green) - can be bid on
+  - _Booked_ (yellow/red) - assigned to a user, cannot be bid on
+  - _Pickup Scheduled_ (blue) - user scheduled for pickup
+  - _Sold_ (red) - transaction complete
 - **Image lightbox** — clicking any item image opens a full-size popup overlay.
 - **Bidding / booking** — logged-in users place a bid through a modal; the default suggested
   bid is the current highest bid + 1 (or the base price if there are no bids yet).
@@ -58,8 +62,9 @@ Pages) talking to a Node API (Azure Web App).
   stored so the admin User Management screen can reveal the real password on demand. The
   encryption key lives server-side (env), never in `users.json`.
 - **Admin dashboard** — full CRUD for products, image upload, enable/disable visibility,
-  per-item bid history, and **status management**: an admin can mark an item _Booked_ and
-  must select the user it is booked for (`admin.html`, admin role required).
+  per-item bid history, and **status management**: an admin can mark an item _Booked_, 
+  _Pickup Scheduled_, or _Sold_, and must select the user it is booked for (`admin.html`, 
+  admin role required).
 - **Admin User Management** — a dedicated **Manage Users** page (`users.html`, top-menu link,
   admin only) to create, edit (email/mobile/role/password), and delete users, including a
   password column with a show/hide toggle. The booked-user dropdown identifies users as
@@ -87,6 +92,8 @@ Pages) talking to a Node API (Azure Web App).
   - **Login** → notifies the owner (`OWNER_EMAIL`).
   - **New bid** → high-priority email to the owner **and** a separate confirmation to the bidder.
   - **Booking** → confirmation to the booked user **and** the owner.
+  - **Pickup Scheduled** → notification to the booked user when admin marks item as pickup scheduled.
+  - **Sold** → confirmation to the buyer when admin marks item as sold.
 - **Scrolling marquee with countdown timer** — a pickup-instructions banner sits directly below
   the navigation on every page. It displays a **live countdown** (days/hours/minutes/seconds) to
   the sale end date (June 15, 2026) at both the start and end of the marquee text, creating
@@ -103,6 +110,11 @@ Pages) talking to a Node API (Azure Web App).
   send a pre-filled email to the user with item details, price, status, and pickup location.
   Admins can also delete wishlist entries.
 - **App icon** — an SVG favicon (`favicon.svg`) is linked from every page.
+- **Contact page** — a dedicated **Contact** page (`contact.html`, top-menu link for all users)
+  displays contact information (email, WhatsApp, website) and a contact form that sends an
+  email to the owner.
+- **Forgot password** — users can reset their password via a 6-digit code sent to their email.
+  The login page has a "Forgot Password?" link that opens a modal for the reset flow.
 - **Zero-database persistence** — users and items are stored in `users.json` / `items.json`;
   uploaded images are stored on disk.
 

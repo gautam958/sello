@@ -693,6 +693,16 @@ h2 {
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-right: none;
 }
+.status-pickup {
+  background: rgba(59, 130, 246, 0.968);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-right: none;
+}
+.status-sold {
+  background: rgba(239, 68, 68, 0.968);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-right: none;
+}
 
 /* ── Wishlist button ────────────────────────────────────────────── */
 .wishlist-btn {

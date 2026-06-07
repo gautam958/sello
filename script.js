@@ -615,9 +615,12 @@ function renderMarketplaceItems(visibleItems) {
         "https://placehold.co/600x400?text=No+Image",
       );
 
-      const isBooked = item.status === "Booked";
-      const statusClass = isBooked ? "status-booked" : "status-available";
-      const statusLabel = isBooked ? "Booked" : "Available";
+      const statusClass = 
+        item.status === "Booked" ? "status-booked" :
+        item.status === "Pickup Scheduled" ? "status-pickup" :
+        item.status === "Sold" ? "status-sold" : "status-available";
+      const statusLabel = item.status || "Available";
+      const canBid = item.status === "Available";
 
       return `
         <div class="card" data-id="${item.id}">
@@ -637,9 +640,9 @@ function renderMarketplaceItems(visibleItems) {
                 <div class="card-footer">
                     <span class="price">HK$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
                     ${
-                      isBooked
-                        ? '<button class="btn" disabled style="opacity:0.5;cursor:default;">Booked</button>'
-                        : `<button class="btn open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">Book / Place Bid</button>`
+                      canBid
+                        ? `<button class="btn open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">Book / Place Bid</button>`
+                        : `<button class="btn" disabled style="opacity:0.5;cursor:default;">${item.status}</button>`
                     }
                 </div>
             </div>
@@ -1104,7 +1107,11 @@ async function loadAdminDashboard() {
                 <td>${item.description}</td>
                 <td>HK$${parseFloat(item.price).toFixed(2)}</td>
                 <td>HK$${parseFloat(topBidValue).toFixed(2)}</td>
-                <td><span class="status-badge ${item.status === "Booked" ? "status-booked" : "status-available"}" style="font-size:0.75rem;padding:2px 8px;">${item.status || "Available"}</span>${item.bookedUser ? " → " + item.bookedUser : ""}</td>
+                <td><span class="status-badge ${
+            item.status === "Booked" ? "status-booked" :
+            item.status === "Pickup Scheduled" ? "status-pickup" :
+            item.status === "Sold" ? "status-sold" : "status-available"
+          }" style="font-size:0.75rem;padding:2px 8px;">${item.status || "Available"}</span>${item.bookedUser ? " → " + item.bookedUser : ""}</td>
                 <td>${item.enabled ? "Enabled" : "Disabled"}</td>
                 <td>${historyRows}</td>
                 <td class="actions-cell">
@@ -1238,7 +1245,7 @@ async function initAdminStatusControls() {
   }
 
   const toggle = () => {
-    const show = statusSel.value === "Booked";
+    const show = statusSel.value === "Booked" || statusSel.value === "Pickup Scheduled";
     bookedGroup.style.display = show ? "" : "none";
     bookedUserSel.required = show;
   };
