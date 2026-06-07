@@ -240,9 +240,18 @@ nav #logout-btn:hover,
   color: #ffffff;
 }
 
-.btn-status-sold:hover,
-.btn-status-booked:hover,
+.btn-status-sold:hover {
+  background-color: #7e2323;
+  transform: none;
+  box-shadow: none;
+}
+.btn-status-booked:hover {
+  background-color: #b87f03;
+  transform: none;
+  box-shadow: none;
+}
 .btn-status-pickup-scheduled:hover {
+  background-color: #2555a2;
   transform: none;
   box-shadow: none;
 }
