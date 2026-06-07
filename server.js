@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const fs = require("fs-extra");
 const path = require("path");
