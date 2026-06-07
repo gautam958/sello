@@ -20,13 +20,13 @@
           >🚚 Move‑Out Sale! All items pickup from Coastal Skyline, Tung Chung –
           all bids are considered and once owner confirm you will received
           detailed instructions on your email, signup and book your items,
-          pickup before 16 June 2026.</span
+          pickup before 14 June 2026.</span
         >
         <span id="marquee-countdown-end"></span>
       </span>
     </div>
 
-    <main class="container">
+    <main class="container container--wide">
       <h2>Add New User</h2>
       <div class="form-container" style="max-width: 100%; margin: 1.5rem 0">
         <form id="user-create-form">
@@ -66,6 +66,20 @@
       </div>
 
       <h2 style="margin-top: 2rem">User Management</h2>
+      <div class="filter-bar">
+        <div class="filter-search">
+          <input
+            type="text"
+            id="users-search"
+            placeholder="Search username, email..."
+          />
+        </div>
+        <select id="users-filter-role">
+          <option value="all">All Roles</option>
+          <option value="admin">Admin</option>
+          <option value="user">User</option>
+        </select>
+      </div>
       <div
         id="user-edit-panel"
         class="form-container"

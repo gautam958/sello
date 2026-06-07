@@ -20,58 +20,54 @@
           >🚚 Move‑Out Sale! All items pickup from Coastal Skyline, Tung Chung –
           all bids are considered and once owner confirm you will received
           detailed instructions on your email, signup and book your items,
-          pickup before 16 June 2026.</span
+          pickup before 14 June 2026.</span
         >
         <span id="marquee-countdown-end"></span>
       </span>
     </div>
 
-    <main class="container">
+    <main class="container container--wide">
       <h2>Activity Logs</h2>
       <p style="color: #64748b; margin: 0.25rem 0 1.25rem">
         Audit trail of user activity and server errors to help identify
         behaviour and potential bugs.
       </p>
 
-      <div
-        class="logs-toolbar"
-        style="
-          display: flex;
-          flex-wrap: wrap;
-          align-items: center;
-          gap: 0.75rem;
-          margin-bottom: 1rem;
-        "
-      >
-        <div class="form-group" style="margin: 0">
-          <label for="log-type-filter" style="font-size: 0.8rem">Filter</label>
-          <select id="log-type-filter">
-            <option value="">All types</option>
-            <option value="signup">Signup</option>
-            <option value="login">Login</option>
-            <option value="login_failed">Login failed</option>
-            <option value="bid">Bid</option>
-            <option value="booking">Booking</option>
-            <option value="email_sent">Email sent</option>
-            <option value="email_failed">Email failed</option>
-            <option value="user">User changes</option>
-            <option value="item">Item changes</option>
-            <option value="error">Errors</option>
-          </select>
+      <div class="filter-bar">
+        <div class="filter-search">
+          <input
+            type="text"
+            id="log-search"
+            placeholder="Search message, user..."
+          />
         </div>
-        <button type="button" class="btn" id="log-refresh-btn">Refresh</button>
-        <button
-          type="button"
-          class="btn"
-          id="log-clear-btn"
-          style="background-color: var(--danger)"
-        >
-          Clear Logs
-        </button>
-        <span
-          id="log-count"
-          style="margin-left: auto; color: #64748b; font-size: 0.85rem"
-        ></span>
+        <select id="log-type-filter">
+          <option value="">All types</option>
+          <option value="signup">Signup</option>
+          <option value="login">Login</option>
+          <option value="login_failed">Login failed</option>
+          <option value="bid">Bid</option>
+          <option value="booking">Booking</option>
+          <option value="email_sent">Email sent</option>
+          <option value="email_failed">Email failed</option>
+          <option value="user">User changes</option>
+          <option value="item">Item changes</option>
+          <option value="error">Errors</option>
+        </select>
+        <div class="filter-actions">
+          <button type="button" class="btn" id="log-refresh-btn">
+            Refresh
+          </button>
+          <button
+            type="button"
+            class="btn"
+            id="log-clear-btn"
+            style="background-color: var(--danger)"
+          >
+            Clear Logs
+          </button>
+        </div>
+        <span id="log-count" class="filter-count"></span>
       </div>
 
       <div style="overflow-x: auto">

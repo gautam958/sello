@@ -45,7 +45,7 @@ function escapeHtml(str) {
 function initApp(page) {
   // Handle Google OAuth callback
   handleGoogleOAuthCallback();
-  
+
   setupNavbar();
   trackVisit();
   startCountdown();
@@ -84,36 +84,40 @@ function handleGoogleOAuthCallback() {
   const params = new URLSearchParams(window.location.search);
   const googleToken = params.get("google_token");
   const googleUser = params.get("google_user");
-  
+
   if (googleToken && googleUser) {
     try {
       // Store the token and user in sessionStorage
       sessionStorage.setItem("sello_token", googleToken);
       sessionStorage.setItem("sello_user", googleUser);
-      
+
       // Clean up URL parameters
       const cleanUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl);
-      
+
       // Show success toast
       const userData = JSON.parse(googleUser);
-      showToast(`Welcome, ${userData.googleName || userData.username}! Signed in with Google.`);
+      showToast(
+        `Welcome, ${userData.googleName || userData.username}! Signed in with Google.`,
+      );
     } catch (e) {
       console.error("Error handling Google OAuth callback:", e);
     }
   }
-  
+
   // Handle error params
   const error = params.get("error");
   if (error) {
     const errorMessages = {
       google_auth_failed: "Google sign-in failed. Please try again.",
       google_auth_error: "An error occurred during Google sign-in.",
-      google_oauth_not_configured: "Google sign-in is not configured. Please contact the administrator.",
+      google_oauth_not_configured:
+        "Google sign-in is not configured. Please contact the administrator.",
     };
-    const message = errorMessages[error] || "Authentication failed. Please try again.";
+    const message =
+      errorMessages[error] || "Authentication failed. Please try again.";
     showToast(message, "error");
-    
+
     // Clean up URL parameters
     const cleanUrl = window.location.pathname + window.location.hash;
     window.history.replaceState({}, document.title, cleanUrl);
@@ -124,7 +128,7 @@ function handleGoogleOAuthCallback() {
 async function loadUserWishlistPage() {
   const grid = document.getElementById("wishlist-grid");
   const emptyEl = document.getElementById("wishlist-empty");
-  
+
   if (!grid) return;
 
   const user = getSessionUser();
@@ -137,9 +141,10 @@ async function loadUserWishlistPage() {
     const res = await fetch(`${API_BASE_URL}/wishlist`, {
       headers: getAuthHeaders(),
     });
-    
+
     if (!res.ok) {
-      grid.innerHTML = '<p style="color:#ef4444;text-align:center;">Unable to load wishlist.</p>';
+      grid.innerHTML =
+        '<p style="color:#ef4444;text-align:center;">Unable to load wishlist.</p>';
       return;
     }
 
@@ -154,9 +159,13 @@ async function loadUserWishlistPage() {
     emptyEl.style.display = "none";
     grid.style.display = "grid";
 
-    grid.innerHTML = wishlist.map((w) => {
-      const imgSrc = resolveImageSrc(w.itemImage, "https://placehold.co/600x400?text=No+Image");
-      return `
+    grid.innerHTML = wishlist
+      .map((w) => {
+        const imgSrc = resolveImageSrc(
+          w.itemImage,
+          "https://placehold.co/600x400?text=No+Image",
+        );
+        return `
         <div class="card" data-id="${w.itemId}">
           <div class="card-img-wrapper">
             <img src="${imgSrc}" alt="${escapeHtml(w.itemName)}" class="card-img" onerror="this.src='https://placehold.co/600x400?text=No+Image'; this.onerror=null;">
@@ -172,7 +181,8 @@ async function loadUserWishlistPage() {
           </div>
         </div>
       `;
-    }).join("");
+      })
+      .join("");
 
     // Remove button handlers
     document.querySelectorAll(".remove-wishlist-btn").forEach((btn) => {
@@ -197,27 +207,32 @@ async function loadUserWishlistPage() {
         }
       });
     });
-
   } catch (err) {
-    grid.innerHTML = '<p style="color:#ef4444;text-align:center;">Error loading wishlist.</p>';
+    grid.innerHTML =
+      '<p style="color:#ef4444;text-align:center;">Error loading wishlist.</p>';
   }
 }
 
 // ─── Countdown Timer ───────────────────────────────────────────────────────
-const SALE_END_DATE = new Date("2026-06-15T23:59:59");
+const SALE_END_DATE = new Date("2026-06-14T23:59:59");
 
 function startCountdown() {
-  const startEl = document.getElementById("marquee-countdown");
-  const endEl = document.getElementById("marquee-countdown-end");
-  if (!startEl || !endEl) return;
+  const countdownEl = document.getElementById("countdown-text");
+  const marqueeStartEl = document.getElementById("marquee-countdown");
+  const marqueeEndEl = document.getElementById("marquee-countdown-end");
+
+  if (!countdownEl && !marqueeStartEl) return;
 
   function update() {
     const now = new Date();
     const diff = SALE_END_DATE - now;
 
     if (diff <= 0) {
-      startEl.textContent = "🚚 Sale has ended! Pickup remaining items by June 16.";
-      endEl.textContent = "";
+      if (countdownEl) countdownEl.textContent = "Sale has ended!";
+      if (marqueeStartEl)
+        marqueeStartEl.textContent =
+          "🚚 Sale has ended! Pickup remaining items by June 16.";
+      if (marqueeEndEl) marqueeEndEl.textContent = "";
       return;
     }
 
@@ -226,12 +241,15 @@ function startCountdown() {
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-    const countdown = days > 0
-      ? `⏰ Sale ends in ${days}d ${hours}h ${minutes}m ${seconds}s —`
-      : `⏰ Sale ends in ${hours}h ${minutes}m ${seconds}s —`;
+    const shortText =
+      days > 0
+        ? `${days}d ${hours}h ${minutes}m ${seconds}s left`
+        : `${hours}h ${minutes}m ${seconds}s left`;
+    const marqueeText = `⏰ Sale ends in ${shortText} —`;
 
-    startEl.textContent = countdown;
-    endEl.textContent = countdown;
+    if (countdownEl) countdownEl.textContent = shortText;
+    if (marqueeStartEl) marqueeStartEl.textContent = marqueeText;
+    if (marqueeEndEl) marqueeEndEl.textContent = marqueeText;
   }
 
   update();
@@ -420,9 +438,10 @@ function renderLiveBids(bids, container) {
         "https://placehold.co/80x60?text=No+Image",
       );
       // Status badge only for non-Available items
-      const statusBadge = bid.itemStatus && bid.itemStatus !== "Available" 
-        ? `<span class="live-bid-status-badge live-bid-status-${bid.itemStatus.toLowerCase().replace(/\s+/g, '-')}">${bid.itemStatus.toUpperCase()}</span>` 
-        : '';
+      const statusBadge =
+        bid.itemStatus && bid.itemStatus !== "Available"
+          ? `<span class="live-bid-status-badge live-bid-status-${bid.itemStatus.toLowerCase().replace(/\s+/g, "-")}">${bid.itemStatus.toUpperCase()}</span>`
+          : "";
       return `
     <div class="live-bid-item fade-in" style="animation-delay: ${index * 80}ms" onclick="scrollToItem('${bid.itemId}')">
       <img src="${imgSrc}" alt="${escapeHtml(bid.itemName)}" class="live-bid-img" onerror="this.src='https://placehold.co/80x60?text=No+Image'; this.onerror=null;">
@@ -554,10 +573,10 @@ function setupNavbar() {
       // Regular user - show wishlist link
       html += link("wishlist.html", "♥ Wishlist");
     }
-    
+
     // User info with profile picture support
     let userInfo = `<span class="nav-user">`;
-    
+
     // Add Google profile picture if available
     if (user.googlePicture) {
       userInfo += `<img src="${user.googlePicture}" alt="Profile" class="nav-user-avatar" />`;
@@ -566,14 +585,13 @@ function setupNavbar() {
       const initial = (user.username || "U").charAt(0).toUpperCase();
       userInfo += `<span class="nav-user-initial">${initial}</span>`;
     }
-    
+
     userInfo += `<span class="nav-user-name">Welcome, ${user.googleName || user.username} (${user.role})</span>`;
     userInfo += `</span>`;
     html += userInfo;
     html += `<button id="logout-btn" class="btn nav-logout">Logout</button>`;
   } else {
     html += link("login.html", "Login");
-    html += link("signup.html", "Register");
   }
   nav.innerHTML = html;
 
@@ -684,10 +702,14 @@ function renderMarketplaceItems(visibleItems) {
         "https://placehold.co/600x400?text=No+Image",
       );
 
-      const statusClass = 
-        item.status === "Booked" ? "status-booked" :
-        item.status === "Pickup Scheduled" ? "status-pickup" :
-        item.status === "Sold" ? "status-sold" : "status-available";
+      const statusClass =
+        item.status === "Booked"
+          ? "status-booked"
+          : item.status === "Pickup Scheduled"
+            ? "status-pickup"
+            : item.status === "Sold"
+              ? "status-sold"
+              : "status-available";
       const statusLabel = item.status || "Available";
       const canBid = item.status === "Available";
 
@@ -711,7 +733,7 @@ function renderMarketplaceItems(visibleItems) {
                     ${
                       canBid
                         ? `<button class="btn btn-status-available open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">Book / Place Bid</button>`
-                        : `<button class="btn btn-status-${item.status.toLowerCase().replace(/\s+/g, '-')}" disabled>${item.status}</button>`
+                        : `<button class="btn btn-status-${item.status.toLowerCase().replace(/\s+/g, "-")}" disabled>${item.status}</button>`
                     }
                 </div>
             </div>
@@ -819,7 +841,7 @@ function setupModalTriggers() {
           id: btn.getAttribute("data-id"),
           name: btn.getAttribute("data-name"),
           price: parseFloat(btn.getAttribute("data-price")),
-          highest: parseFloat(btn.getAttribute("data-highest"))
+          highest: parseFloat(btn.getAttribute("data-highest")),
         };
         // Show inline auth modal instead of redirecting
         openAuthModal();
@@ -863,8 +885,15 @@ function openAuthModal() {
   document.getElementById("auth-loading").style.display = "none";
 
   // Clear inputs
-  ["auth-username", "auth-password", "auth-new-username", "auth-new-email",
-   "auth-new-mobile", "auth-new-password", "auth-confirm-password"].forEach(id => {
+  [
+    "auth-username",
+    "auth-password",
+    "auth-new-username",
+    "auth-new-email",
+    "auth-new-mobile",
+    "auth-new-password",
+    "auth-confirm-password",
+  ].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
@@ -872,7 +901,8 @@ function openAuthModal() {
   // Set login tab as active
   document.getElementById("tab-login").classList.add("active");
   document.getElementById("tab-login").style.color = "var(--primary)";
-  document.getElementById("tab-login").style.borderBottom = "2px solid var(--primary)";
+  document.getElementById("tab-login").style.borderBottom =
+    "2px solid var(--primary)";
   document.getElementById("tab-signup").classList.remove("active");
   document.getElementById("tab-signup").style.color = "#64748b";
   document.getElementById("tab-signup").style.borderBottom = "none";
@@ -889,26 +919,38 @@ function closeAuthModal() {
 // Tab switching
 document.addEventListener("DOMContentLoaded", () => {
   // Initialize Google Sign-In buttons with correct auth URL
-  ["google-signin-btn", "google-signup-btn", "google-auth-btn"].forEach((id) => {
-    const btn = document.getElementById(id);
-    if (btn) {
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        const authPath = btn.dataset.authUrl || "/auth/google";
-        // When on GitHub Pages, send full return URL; otherwise just path
-        const returnPath = window.location.pathname.replace(/\/[^\/]*$/, "/index.html");
-        const returnUrl = AUTH_BASE_URL ? `${window.location.origin}${returnPath}` : "index.html";
-        window.location.href = AUTH_BASE_URL + authPath + "?return=" + encodeURIComponent(returnUrl);
-      });
-    }
-  });
+  ["google-signin-btn", "google-signup-btn", "google-auth-btn"].forEach(
+    (id) => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          const authPath = btn.dataset.authUrl || "/auth/google";
+          // When on GitHub Pages, send full return URL; otherwise just path
+          const returnPath = window.location.pathname.replace(
+            /\/[^\/]*$/,
+            "/index.html",
+          );
+          const returnUrl = AUTH_BASE_URL
+            ? `${window.location.origin}${returnPath}`
+            : "index.html";
+          window.location.href =
+            AUTH_BASE_URL +
+            authPath +
+            "?return=" +
+            encodeURIComponent(returnUrl);
+        });
+      }
+    },
+  );
 
   document.getElementById("tab-login")?.addEventListener("click", () => {
     document.getElementById("auth-login-form").style.display = "block";
     document.getElementById("auth-signup-form").style.display = "none";
     document.getElementById("tab-login").classList.add("active");
     document.getElementById("tab-login").style.color = "var(--primary)";
-    document.getElementById("tab-login").style.borderBottom = "2px solid var(--primary)";
+    document.getElementById("tab-login").style.borderBottom =
+      "2px solid var(--primary)";
     document.getElementById("tab-signup").classList.remove("active");
     document.getElementById("tab-signup").style.color = "#64748b";
     document.getElementById("tab-signup").style.borderBottom = "none";
@@ -920,7 +962,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("auth-signup-form").style.display = "block";
     document.getElementById("tab-signup").classList.add("active");
     document.getElementById("tab-signup").style.color = "var(--primary)";
-    document.getElementById("tab-signup").style.borderBottom = "2px solid var(--primary)";
+    document.getElementById("tab-signup").style.borderBottom =
+      "2px solid var(--primary)";
     document.getElementById("tab-login").classList.remove("active");
     document.getElementById("tab-login").style.color = "#64748b";
     document.getElementById("tab-login").style.borderBottom = "none";
@@ -928,96 +971,37 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Close button
-  document.getElementById("auth-modal-close")?.addEventListener("click", closeAuthModal);
+  document
+    .getElementById("auth-modal-close")
+    ?.addEventListener("click", closeAuthModal);
 
   // Inline Login Form Handler
-  document.getElementById("auth-login-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const username = document.getElementById("auth-username").value.trim();
-    const password = document.getElementById("auth-password").value;
-    const errorEl = document.getElementById("auth-login-error");
-    const loadingEl = document.getElementById("auth-loading");
+  document
+    .getElementById("auth-login-form")
+    ?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("auth-username").value.trim();
+      const password = document.getElementById("auth-password").value;
+      const errorEl = document.getElementById("auth-login-error");
+      const loadingEl = document.getElementById("auth-loading");
 
-    errorEl.style.display = "none";
-    loadingEl.style.display = "block";
+      errorEl.style.display = "none";
+      loadingEl.style.display = "block";
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await res.json();
-      loadingEl.style.display = "none";
-
-      if (res.ok) {
-        // Login successful - store session
-        sessionStorage.setItem("sello_user", JSON.stringify(data.user));
-        sessionStorage.setItem("sello_token", data.token);
-
-        closeAuthModal();
-        setupNavbar();
-
-        // If there was a pending bid, open the bid modal
-        if (pendingBidItem) {
-          openBidModalFromItem(pendingBidItem);
-          pendingBidItem = null;
-        }
-      } else {
-        errorEl.textContent = data.message || "Login failed. Please try again.";
-        errorEl.style.display = "block";
-      }
-    } catch (err) {
-      loadingEl.style.display = "none";
-      errorEl.textContent = "Connection error. Please try again.";
-      errorEl.style.display = "block";
-    }
-  });
-
-  // Inline Signup Form Handler
-  document.getElementById("auth-signup-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const username = document.getElementById("auth-new-username").value.trim();
-    const email = document.getElementById("auth-new-email").value.trim();
-    const mobile = document.getElementById("auth-new-mobile").value.trim();
-    const password = document.getElementById("auth-new-password").value;
-    const confirmPassword = document.getElementById("auth-confirm-password").value;
-    const errorEl = document.getElementById("auth-signup-error");
-    const loadingEl = document.getElementById("auth-loading");
-
-    errorEl.style.display = "none";
-
-    if (password !== confirmPassword) {
-      errorEl.textContent = "Passwords do not match.";
-      errorEl.style.display = "block";
-      return;
-    }
-
-    loadingEl.style.display = "block";
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, mobile, password }),
-      });
-
-      const data = await res.json();
-      loadingEl.style.display = "none";
-
-      if (res.ok) {
-        // Signup successful - auto login
-        const loginRes = await fetch(`${API_BASE_URL}/login`, {
+      try {
+        const res = await fetch(`${API_BASE_URL}/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password }),
         });
 
-        if (loginRes.ok) {
-          const loginData = await loginRes.json();
-          sessionStorage.setItem("sello_user", JSON.stringify(loginData.user));
-          sessionStorage.setItem("sello_token", loginData.token);
+        const data = await res.json();
+        loadingEl.style.display = "none";
+
+        if (res.ok) {
+          // Login successful - store session
+          sessionStorage.setItem("sello_user", JSON.stringify(data.user));
+          sessionStorage.setItem("sello_token", data.token);
 
           closeAuthModal();
           setupNavbar();
@@ -1028,30 +1012,106 @@ document.addEventListener("DOMContentLoaded", () => {
             pendingBidItem = null;
           }
         } else {
-          // Signup succeeded but auto-login failed - switch to login tab
-          showToast("Account created! Please login.");
-          document.getElementById("tab-login").click();
-          document.getElementById("auth-username").value = username;
+          errorEl.textContent =
+            data.message || "Login failed. Please try again.";
+          errorEl.style.display = "block";
         }
-      } else {
-        errorEl.textContent = data.message || "Signup failed. Please try again.";
+      } catch (err) {
+        loadingEl.style.display = "none";
+        errorEl.textContent = "Connection error. Please try again.";
         errorEl.style.display = "block";
       }
-    } catch (err) {
-      loadingEl.style.display = "none";
-      errorEl.textContent = "Connection error. Please try again.";
-      errorEl.style.display = "block";
-    }
-  });
+    });
+
+  // Inline Signup Form Handler
+  document
+    .getElementById("auth-signup-form")
+    ?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document
+        .getElementById("auth-new-username")
+        .value.trim();
+      const email = document.getElementById("auth-new-email").value.trim();
+      const mobile = document.getElementById("auth-new-mobile").value.trim();
+      const password = document.getElementById("auth-new-password").value;
+      const confirmPassword = document.getElementById(
+        "auth-confirm-password",
+      ).value;
+      const errorEl = document.getElementById("auth-signup-error");
+      const loadingEl = document.getElementById("auth-loading");
+
+      errorEl.style.display = "none";
+
+      if (password !== confirmPassword) {
+        errorEl.textContent = "Passwords do not match.";
+        errorEl.style.display = "block";
+        return;
+      }
+
+      loadingEl.style.display = "block";
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, email, mobile, password }),
+        });
+
+        const data = await res.json();
+        loadingEl.style.display = "none";
+
+        if (res.ok) {
+          // Signup successful - auto login
+          const loginRes = await fetch(`${API_BASE_URL}/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password }),
+          });
+
+          if (loginRes.ok) {
+            const loginData = await loginRes.json();
+            sessionStorage.setItem(
+              "sello_user",
+              JSON.stringify(loginData.user),
+            );
+            sessionStorage.setItem("sello_token", loginData.token);
+
+            closeAuthModal();
+            setupNavbar();
+
+            // If there was a pending bid, open the bid modal
+            if (pendingBidItem) {
+              openBidModalFromItem(pendingBidItem);
+              pendingBidItem = null;
+            }
+          } else {
+            // Signup succeeded but auto-login failed - switch to login tab
+            showToast("Account created! Please login.");
+            document.getElementById("tab-login").click();
+            document.getElementById("auth-username").value = username;
+          }
+        } else {
+          errorEl.textContent =
+            data.message || "Signup failed. Please try again.";
+          errorEl.style.display = "block";
+        }
+      } catch (err) {
+        loadingEl.style.display = "none";
+        errorEl.textContent = "Connection error. Please try again.";
+        errorEl.style.display = "block";
+      }
+    });
 });
 
 function openBidModalFromItem(item) {
   currentTargetBidId = item.id;
   const highestBidValue = item.highest > 0 ? item.highest : item.price;
-  const dynamicDefaultValue = highestBidValue > 0 ? highestBidValue + 1.0 : item.price;
+  const dynamicDefaultValue =
+    highestBidValue > 0 ? highestBidValue + 1.0 : item.price;
 
   document.getElementById("modal-item-name").innerText = item.name;
-  document.getElementById("modal-item-price").innerText = `HK$${item.price.toFixed(2)}`;
+  document.getElementById("modal-item-price").innerText =
+    `HK$${item.price.toFixed(2)}`;
   document.getElementById("modal-highest-bid").innerText =
     highestBidValue > 0 ? `HK$${highestBidValue.toFixed(2)}` : "None";
   document.getElementById("bid-amount").value = dynamicDefaultValue.toFixed(2);
@@ -1086,7 +1146,7 @@ document.addEventListener("DOMContentLoaded", () => {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              ...getAuthHeaders()
+              ...getAuthHeaders(),
             },
             body: JSON.stringify({ bidAmount: amount }),
           },
@@ -1233,10 +1293,14 @@ async function loadAdminDashboard() {
               <td>HK$${parseFloat(item.price).toFixed(2)}</td>
               <td>HK$${parseFloat(topBidValue).toFixed(2)}</td>
               <td><span class="status-badge ${
-            item.status === "Booked" ? "status-booked" :
-            item.status === "Pickup Scheduled" ? "status-pickup" :
-            item.status === "Sold" ? "status-sold" : "status-available"
-          }" style="font-size:0.75rem;padding:2px 8px;">${item.status || "Available"}</span>${item.bookedUser ? " → " + item.bookedUser : ""}</td>
+                item.status === "Booked"
+                  ? "status-booked"
+                  : item.status === "Pickup Scheduled"
+                    ? "status-pickup"
+                    : item.status === "Sold"
+                      ? "status-sold"
+                      : "status-available"
+              }" style="font-size:0.75rem;padding:2px 8px;">${item.status || "Available"}</span>${item.bookedUser ? " → " + item.bookedUser : ""}</td>
               <td>${item.enabled ? "Enabled" : "Disabled"}</td>
               <td>${historyRows}</td>
               <td class="actions-cell">
@@ -1250,16 +1314,22 @@ async function loadAdminDashboard() {
   };
 
   const filterAdminItems = () => {
-    const search = document.getElementById("admin-items-search")?.value.toLowerCase() || "";
-    const statusFilter = document.getElementById("admin-items-filter-status")?.value || "all";
-    const visibilityFilter = document.getElementById("admin-items-filter-visibility")?.value || "all";
+    const search =
+      document.getElementById("admin-items-search")?.value.toLowerCase() || "";
+    const statusFilter =
+      document.getElementById("admin-items-filter-status")?.value || "all";
+    const visibilityFilter =
+      document.getElementById("admin-items-filter-visibility")?.value || "all";
 
-    const filtered = __adminAllItems.filter(item => {
-      const matchesSearch = !search || 
-        item.name.toLowerCase().includes(search) || 
+    const filtered = __adminAllItems.filter((item) => {
+      const matchesSearch =
+        !search ||
+        item.name.toLowerCase().includes(search) ||
         item.description.toLowerCase().includes(search);
-      const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-      const matchesVisibility = visibilityFilter === "all" || 
+      const matchesStatus =
+        statusFilter === "all" || item.status === statusFilter;
+      const matchesVisibility =
+        visibilityFilter === "all" ||
         (visibilityFilter === "Enabled" && item.enabled) ||
         (visibilityFilter === "Disabled" && !item.enabled);
       return matchesSearch && matchesStatus && matchesVisibility;
@@ -1278,11 +1348,18 @@ async function loadAdminDashboard() {
       renderAdminItemsTable(items);
 
       // Add filter event listeners
-      document.getElementById("admin-items-search")?.addEventListener("input", filterAdminItems);
-      document.getElementById("admin-items-filter-status")?.addEventListener("change", filterAdminItems);
-      document.getElementById("admin-items-filter-visibility")?.addEventListener("change", filterAdminItems);
+      document
+        .getElementById("admin-items-search")
+        ?.addEventListener("input", filterAdminItems);
+      document
+        .getElementById("admin-items-filter-status")
+        ?.addEventListener("change", filterAdminItems);
+      document
+        .getElementById("admin-items-filter-visibility")
+        ?.addEventListener("change", filterAdminItems);
     } catch (e) {
-      tableBody.innerHTML = '<tr><td colspan="9" style="color:red;">Failed to load items.</td></tr>';
+      tableBody.innerHTML =
+        '<tr><td colspan="9" style="color:red;">Failed to load items.</td></tr>';
     }
   };
 
@@ -1290,7 +1367,7 @@ async function loadAdminDashboard() {
   document.addEventListener("click", (e) => {
     if (e.target.classList.contains("admin-edit-btn")) {
       const itemId = e.target.getAttribute("data-id");
-      const item = __adminAllItems.find(i => i.id === itemId);
+      const item = __adminAllItems.find((i) => i.id === itemId);
       if (item) populateEditForm(item);
     }
     if (e.target.classList.contains("admin-del-btn")) {
@@ -1403,7 +1480,10 @@ async function initAdminStatusControls() {
   }
 
   const toggle = () => {
-    const show = statusSel.value === "Booked" || statusSel.value === "Pickup Scheduled" || statusSel.value === "Sold";
+    const show =
+      statusSel.value === "Booked" ||
+      statusSel.value === "Pickup Scheduled" ||
+      statusSel.value === "Sold";
     bookedGroup.style.display = show ? "" : "none";
     bookedUserSel.required = show;
   };
@@ -1445,13 +1525,11 @@ async function loadAdminUsers() {
   const tableBody = document.getElementById("admin-users-table");
   if (!tableBody) return;
 
-  try {
-    const res = await fetch(`${API_BASE_URL}/admin/users`, {
-      headers: getAuthHeaders(),
-    });
-    if (!res.ok) return;
-    const users = await res.json();
+  const searchEl = document.getElementById("users-search");
+  const roleFilterEl = document.getElementById("users-filter-role");
+  let __allUsers = [];
 
+  const renderUsers = (users) => {
     tableBody.innerHTML = users
       .map(
         (u) => `
@@ -1507,6 +1585,42 @@ async function loadAdminUsers() {
         btn.textContent = showing ? "show" : "hide";
       }),
     );
+  };
+
+  const filterUsers = () => {
+    const search = searchEl ? searchEl.value.toLowerCase().trim() : "";
+    const role = roleFilterEl ? roleFilterEl.value : "all";
+
+    const filtered = __allUsers.filter((u) => {
+      const matchesSearch =
+        !search ||
+        (u.username || "").toLowerCase().includes(search) ||
+        (u.email || "").toLowerCase().includes(search) ||
+        (u.mobile || "").toLowerCase().includes(search);
+      const matchesRole = role === "all" || u.role === role;
+      return matchesSearch && matchesRole;
+    });
+
+    renderUsers(filtered);
+  };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/users`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) return;
+    __allUsers = await res.json();
+    renderUsers(__allUsers);
+
+    // Bind filter event listeners
+    if (searchEl && !searchEl.dataset.bound) {
+      searchEl.dataset.bound = "1";
+      searchEl.addEventListener("input", filterUsers);
+    }
+    if (roleFilterEl && !roleFilterEl.dataset.bound) {
+      roleFilterEl.dataset.bound = "1";
+      roleFilterEl.addEventListener("change", filterUsers);
+    }
   } catch (err) {
     console.error("Failed to load users.");
   }
@@ -1645,7 +1759,69 @@ async function loadAdminLogs() {
   const countEl = document.getElementById("log-count");
   const type = filterEl ? filterEl.value : "";
 
-  const render = async () => {
+  const searchEl = document.getElementById("log-search");
+  let __logsCache = [];
+
+  const render = async (cachedLogs) => {
+    const selectedType = filterEl ? filterEl.value : type;
+    const search = searchEl ? searchEl.value.toLowerCase().trim() : "";
+
+    let logs;
+    if (cachedLogs) {
+      logs = cachedLogs;
+    } else {
+      const qs = selectedType
+        ? `?type=${encodeURIComponent(selectedType)}`
+        : "";
+      try {
+        const res = await fetch(`${API_BASE_URL}/admin/logs${qs}`, {
+          headers: getAuthHeaders(),
+        });
+        if (!res.ok) {
+          tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#ef4444;">Unable to load logs (${res.status}).</td></tr>`;
+          return;
+        }
+        logs = await res.json();
+        __logsCache = logs;
+      } catch (err) {
+        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#ef4444;">Error loading logs.</td></tr>`;
+        return;
+      }
+    }
+
+    let filtered = logs;
+    if (search) {
+      filtered = filtered.filter((l) => {
+        const hay =
+          `${l.user || ""} ${l.message || ""} ${l.details || ""} ${l.type || ""}`.toLowerCase();
+        return hay.includes(search);
+      });
+    }
+
+    if (countEl) countEl.textContent = `${filtered.length} entries`;
+
+    if (!filtered.length) {
+      tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94a3b8;">No activity logged yet.</td></tr>`;
+      return;
+    }
+
+    tableBody.innerHTML = filtered
+      .map((l) => {
+        const color = LOG_TYPE_COLORS[l.type] || "#64748b";
+        return `
+            <tr>
+              <td style="white-space:nowrap;font-size:0.8rem;color:#475569;">${new Date(l.timestamp).toLocaleString()}</td>
+              <td><span style="display:inline-block;background:${color};color:#fff;border-radius:2rem;font-size:0.7rem;font-weight:600;padding:2px 10px;text-transform:uppercase;">${escapeHtml(l.type)}</span></td>
+              <td>${l.user ? escapeHtml(l.user) : "—"}</td>
+              <td>${escapeHtml(l.message)}</td>
+              <td style="font-size:0.8rem;color:#64748b;">${l.details ? escapeHtml(l.details) : "—"}</td>
+            </tr>
+          `;
+      })
+      .join("");
+  };
+
+  const fetchLogsAndRender = async () => {
     const selectedType = filterEl ? filterEl.value : type;
     const qs = selectedType ? `?type=${encodeURIComponent(selectedType)}` : "";
     try {
@@ -1656,44 +1832,29 @@ async function loadAdminLogs() {
         tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#ef4444;">Unable to load logs (${res.status}).</td></tr>`;
         return;
       }
-      const logs = await res.json();
-      if (countEl) countEl.textContent = `${logs.length} entries`;
-
-      if (!logs.length) {
-        tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94a3b8;">No activity logged yet.</td></tr>`;
-        return;
-      }
-
-      tableBody.innerHTML = logs
-        .map((l) => {
-          const color = LOG_TYPE_COLORS[l.type] || "#64748b";
-          return `
-            <tr>
-              <td style="white-space:nowrap;font-size:0.8rem;color:#475569;">${new Date(l.timestamp).toLocaleString()}</td>
-              <td><span style="display:inline-block;background:${color};color:#fff;border-radius:2rem;font-size:0.7rem;font-weight:600;padding:2px 10px;text-transform:uppercase;">${escapeHtml(l.type)}</span></td>
-              <td>${l.user ? escapeHtml(l.user) : "—"}</td>
-              <td>${escapeHtml(l.message)}</td>
-              <td style="font-size:0.8rem;color:#64748b;">${l.details ? escapeHtml(l.details) : "—"}</td>
-            </tr>
-          `;
-        })
-        .join("");
+      __logsCache = await res.json();
+      render(__logsCache);
     } catch (err) {
       tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#ef4444;">Error loading logs.</td></tr>`;
     }
   };
 
-  await render();
+  await fetchLogsAndRender();
 
   if (filterEl && !filterEl.dataset.bound) {
     filterEl.dataset.bound = "1";
-    filterEl.addEventListener("change", render);
+    filterEl.addEventListener("change", fetchLogsAndRender);
+  }
+
+  if (searchEl && !searchEl.dataset.bound) {
+    searchEl.dataset.bound = "1";
+    searchEl.addEventListener("input", () => render(__logsCache));
   }
 
   const refreshBtn = document.getElementById("log-refresh-btn");
   if (refreshBtn && !refreshBtn.dataset.bound) {
     refreshBtn.dataset.bound = "1";
-    refreshBtn.addEventListener("click", render);
+    refreshBtn.addEventListener("click", fetchLogsAndRender);
   }
 
   const clearBtn = document.getElementById("log-clear-btn");
@@ -1813,6 +1974,23 @@ async function loadAdminVisitors() {
       .join("");
   };
 
+  const searchEl = document.getElementById("visitor-search");
+
+  const renderWithSearch = () => {
+    const search = searchEl ? searchEl.value.toLowerCase().trim() : "";
+    // Temporarily override cache to include search filtering
+    const origCache = cache;
+    if (search) {
+      cache = cache.filter((v) => {
+        const hay =
+          `${v.user || ""} ${v.city || ""} ${v.region || ""} ${v.country || ""} ${v.device || ""} ${v.browser || ""} ${v.os || ""} ${v.computerName || ""} ${v.lastPath || ""} ${v.referrer || ""}`.toLowerCase();
+        return hay.includes(search);
+      });
+    }
+    render();
+    cache = origCache;
+  };
+
   const fetchAndRender = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/admin/visitors`, {
@@ -1825,7 +2003,7 @@ async function loadAdminVisitors() {
       cache = await res.json();
       // Reset country filter so it repopulates with fresh data.
       if (filterCountry) delete filterCountry.dataset.filled;
-      render();
+      renderWithSearch();
     } catch (err) {
       tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#ef4444;">Error loading visitors.</td></tr>`;
     }
@@ -1833,8 +2011,12 @@ async function loadAdminVisitors() {
 
   await fetchAndRender();
 
-  filterCountry?.addEventListener("change", render);
-  filterType?.addEventListener("change", render);
+  filterCountry?.addEventListener("change", renderWithSearch);
+  filterType?.addEventListener("change", renderWithSearch);
+  if (searchEl && !searchEl.dataset.bound) {
+    searchEl.dataset.bound = "1";
+    searchEl.addEventListener("input", renderWithSearch);
+  }
   refreshBtn?.addEventListener("click", fetchAndRender);
   clearBtn?.addEventListener("click", async () => {
     if (!confirm("Clear all visitor records? This cannot be undone.")) return;
