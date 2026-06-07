@@ -216,6 +216,20 @@ nav #logout-btn:hover,
   box-shadow: none;
 }
 
+/* Disabled Sold button styling */
+.btn-sold-disabled {
+  background-color: var(--danger) !important;
+  color: #ffffff !important;
+  opacity: 0.85;
+  cursor: default !important;
+  border: none;
+}
+
+.btn-sold-disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
 /* Core Form Group Field Design Parameters */
 .form-group {
   margin-bottom: 1.5rem;
@@ -938,6 +952,20 @@ h2 {
   margin-bottom: 0.15rem;
 }
 
+.live-bid-sold-badge {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: var(--danger);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  letter-spacing: 0.03em;
+}
+
 .live-bid-name {
   font-size: 0.75rem;
   color: var(--secondary);
@@ -986,6 +1014,165 @@ h2 {
   .container {
     padding-right: 290px;
   }
+}
+
+/* ── Catalog Error Panel ──────────────────────────────────────── */
+.catalog-error-panel {
+  max-width: 480px;
+  margin: 3rem auto;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+  animation: errorSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes errorSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.catalog-error-panel .error-header {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.catalog-error-panel .error-header-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.catalog-error-panel .error-header-text h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.15rem;
+}
+
+.catalog-error-panel .error-header-text p {
+  font-size: 0.8rem;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.catalog-error-panel .error-body {
+  padding: 1.5rem;
+}
+
+.catalog-error-panel .error-body-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--secondary);
+  margin: 0 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.catalog-error-panel .error-body-title::before {
+  content: "🔧";
+  font-size: 1rem;
+}
+
+.catalog-error-panel .troubleshoot-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.catalog-error-panel .troubleshoot-list li {
+  padding: 0.85rem 1rem;
+  background: var(--bg-main);
+  border-radius: 10px;
+  margin-bottom: 0.65rem;
+  font-size: 0.88rem;
+  color: #475569;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border: 1px solid var(--border-subtle);
+  transition: var(--transition-smooth);
+}
+
+.catalog-error-panel .troubleshoot-list li:last-child {
+  margin-bottom: 0;
+}
+
+.catalog-error-panel .troubleshoot-list li:hover {
+  border-color: rgba(79, 70, 229, 0.3);
+  background: var(--primary-light);
+}
+
+.catalog-error-panel .troubleshoot-list .step-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.catalog-error-panel .troubleshoot-list strong {
+  color: var(--secondary);
+  font-weight: 600;
+}
+
+.catalog-error-panel .troubleshoot-list kbd {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  background: #e2e8f0;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.catalog-error-panel .error-footer {
+  padding: 1rem 1.5rem;
+  background: var(--bg-main);
+  border-top: 1px solid var(--border-subtle);
+  text-align: center;
+}
+
+.catalog-error-panel .error-footer p {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.catalog-error-panel .error-footer a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.catalog-error-panel .error-footer a:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 768px) {
@@ -1058,5 +1245,9 @@ h2 {
 
   .grid {
     gap: 1.5rem;
+  }
+
+  .catalog-error-panel {
+    margin: 2rem 1rem;
   }
 }

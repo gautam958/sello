@@ -569,6 +569,7 @@ app.get("/api/recent-bids", async (req, res) => {
             itemImage: item.image,
             amount: bid.bidAmount,
             timestamp: bid.timestamp,
+            itemStatus: item.status,
           });
         }
       }

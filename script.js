@@ -369,11 +369,14 @@ function renderLiveBids(bids, container) {
         bid.itemImage,
         "https://placehold.co/80x60?text=No+Image",
       );
+      const soldBadge = bid.itemStatus === "Sold" 
+        ? `<span class="live-bid-sold-badge">SOLD</span>` 
+        : '';
       return `
     <div class="live-bid-item fade-in" style="animation-delay: ${index * 80}ms" onclick="scrollToItem('${bid.itemId}')">
       <img src="${imgSrc}" alt="${escapeHtml(bid.itemName)}" class="live-bid-img" onerror="this.src='https://placehold.co/80x60?text=No+Image'; this.onerror=null;">
       <div class="live-bid-content">
-        <div class="live-bid-amount">HK$ ${bid.amount.toLocaleString()}</div>
+        <div class="live-bid-amount">HK$ ${bid.amount.toLocaleString()} ${soldBadge}</div>
         <div class="live-bid-name">${escapeHtml(bid.itemName)}</div>
         <div class="live-bid-time">${formatTimeAgo(bid.timestamp)}</div>
       </div>
@@ -642,7 +645,7 @@ function renderMarketplaceItems(visibleItems) {
                     ${
                       canBid
                         ? `<button class="btn open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">Book / Place Bid</button>`
-                        : `<button class="btn" disabled style="opacity:0.5;cursor:default;">${item.status}</button>`
+                        : `<button class="btn btn-sold-disabled" disabled style="cursor:default;">${item.status}</button>`
                     }
                 </div>
             </div>
@@ -688,16 +691,50 @@ async function loadMarketplaceItems() {
     applyItemFilters();
   } catch (err) {
     grid.innerHTML = `
-      <div style="text-align:center; padding: 2rem; max-width: 400px; margin: 0 auto;">
-        <p style="color: var(--danger-color); font-size: 1.1rem; margin-bottom: 1rem;">
-          We are updating our catalog, please try again in a few minutes.
-        </p>
-        <p style="color: #666; font-size: 0.9rem; text-align: left;">
-          <strong>Troubleshooting:</strong><br>
-          • Hard Refresh: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> (Windows) or <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> (Mac)<br>
-          • Clear browser cache: Settings → Privacy → Clear browsing data<br>
-          • Or open in a private/incognito window
-        </p>
+      <div class="catalog-error-panel">
+        <div class="error-header">
+          <div class="error-header-icon">⚠️</div>
+          <div class="error-header-text">
+            <h3>We are updating our catalog</h3>
+            <p>We will be back soon</p>
+          </div>
+        </div>
+        <div class="error-body">
+          <div class="error-body-title">Troubleshooting Steps</div>
+          <ul class="troubleshoot-list">
+            <li>
+              <span class="step-icon">1</span>
+              <div>
+                <strong>Hard Refresh</strong><br>
+                Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> (Windows) or <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> (Mac)
+              </div>
+            </li>
+            <li>
+              <span class="step-icon">2</span>
+              <div>
+                <strong>Clear Browser Cache</strong><br>
+                Settings → Privacy → Clear browsing data, then refresh
+              </div>
+            </li>
+            <li>
+              <span class="step-icon">3</span>
+              <div>
+                <strong>Try Incognito Mode</strong><br>
+                Open in a private/incognito window to avoid cached issues
+              </div>
+            </li>
+            <li>
+              <span class="step-icon">4</span>
+              <div>
+                <strong>Check Your Connection</strong><br>
+                Ensure stable internet and try again shortly
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="error-footer">
+          <p>Still having issues? <a href="contact.html">Contact us</a></p>
+        </div>
       </div>
     `;
   }
