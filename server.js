@@ -590,7 +590,7 @@ app.get("/api/recent-bids", async (req, res) => {
 });
 
 // MULTI-USER BIDDING / BOOKING ACTION ROUTE
-app.post("/api/items/book/:id", requireAuth, async (req, res) => {
+app.post("/api/items/book/:id", authenticate, async (req, res) => {
   const itemId = req.params.id;
   const { bidAmount } = req.body;
   const user = req.auth.username;
