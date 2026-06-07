@@ -609,8 +609,11 @@ app.get(
         `,
       });
 
-      // Redirect with token (ensure absolute path)
-      const safeReturnUrl = returnUrl.startsWith("/") ? returnUrl : `/${returnUrl}`;
+      // Redirect with token
+      // If returnUrl is absolute URL (https://...), use it directly
+      // Otherwise treat as relative path
+      const isAbsoluteUrl = returnUrl.startsWith("http://") || returnUrl.startsWith("https://");
+      const safeReturnUrl = isAbsoluteUrl ? returnUrl : (returnUrl.startsWith("/") ? returnUrl : `/${returnUrl}`);
       const separator = safeReturnUrl.includes("?") ? "&" : "?";
       res.redirect(`${safeReturnUrl}${separator}google_token=${token}&google_user=${encodeURIComponent(JSON.stringify(cleanUser))}`);
     } catch (err) {
