@@ -226,7 +226,7 @@ nav #logout-btn:hover,
 }
 
 .btn-status-sold {
-  background-color: #ef4444;
+  background-color: #a12d2d;
   color: #ffffff;
 }
 
@@ -236,7 +236,7 @@ nav #logout-btn:hover,
 }
 
 .btn-status-pickup-scheduled {
-  background-color: #3b82f6;
+  background-color: #3068c3;
   color: #ffffff;
 }
 
@@ -249,12 +249,12 @@ nav #logout-btn:hover,
 
 /* Available / Book / Place Bid button - Green to match Available badge */
 .btn-status-available {
-  background-color: #16a34a;
+  background-color: #3d8b5a;
   color: #ffffff;
 }
 
 .btn-status-available:hover {
-  background-color: #15803d;
+  background-color: #217c42;
 }
 
 /* Core Form Group Field Design Parameters */
@@ -744,7 +744,7 @@ h2 {
   border-right: none;
 }
 .status-sold {
-  background: rgba(169, 5, 5, 0.924);
+  background: rgba(146, 2, 2, 0.924);
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-right: none;
 }
