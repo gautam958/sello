@@ -9,13 +9,18 @@
   </head>
   <body>
     <header>
-      <a href="index.html" class="logo">Sello Marketplace – Moving Out Sale</a>
+      <a href="index.html" class="logo">Sello – Moving Out Sale</a>
     </header>
 
     <div class="marquee">
       <span id="marquee-wrapper">
         <span id="marquee-countdown"></span>
-        <span>🚚 Move‑Out Sale! All items pickup from Coastal Skyline, Tung Chung – all bids are considered and once owner confirm you will received detailed instructions on your email, signup and book your items, pickup before 16 June 2026.</span>
+        <span
+          >🚚 Move‑Out Sale! All items pickup from Coastal Skyline, Tung Chung –
+          all bids are considered and once owner confirm you will received
+          detailed instructions on your email, signup and book your items,
+          pickup before 16 June 2026.</span
+        >
         <span id="marquee-countdown-end"></span>
       </span>
     </div>
@@ -23,22 +28,39 @@
     <main class="container">
       <div class="form-container">
         <h2 style="margin-bottom: 1.5rem; text-align: center">Login</h2>
-        
+
         <!-- Google Sign-In Button -->
-        <a href="#" class="google-btn" id="google-signin-btn" data-auth-url="/auth/google?return=index.html">
+        <a
+          href="#"
+          class="google-btn"
+          id="google-signin-btn"
+          data-auth-url="/auth/google?return=index.html"
+        >
           <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            <path
+              fill="#4285F4"
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+            />
+            <path
+              fill="#EA4335"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+            />
           </svg>
           <span>Sign in with Google</span>
         </a>
-        
+
         <div class="divider">
           <span>or</span>
         </div>
-        
+
         <form id="login-form">
           <div class="form-group">
             <label for="username">Username</label>
@@ -50,7 +72,16 @@
           </div>
           <button type="submit" class="btn" style="width: 100%">Sign In</button>
           <p style="margin-top: 1rem; text-align: center">
-            <a href="#" id="forgot-password-link" style="color: var(--primary-color); font-weight: 500; font-size: 0.9rem;">Forgot Password?</a>
+            <a
+              href="#"
+              id="forgot-password-link"
+              style="
+                color: var(--primary-color);
+                font-weight: 500;
+                font-size: 0.9rem;
+              "
+              >Forgot Password?</a
+            >
           </p>
           <p style="margin-top: 0.5rem; text-align: center">
             Don't have an account?
@@ -75,45 +106,96 @@
 
     <!-- Forgot Password Modal -->
     <div id="forgot-modal" class="bid-modal" style="display: none">
-      <div class="modal-content" style="max-width: 420px;">
+      <div class="modal-content" style="max-width: 420px">
         <span class="close-btn" id="forgot-modal-close">&times;</span>
-        <h2 style="margin-bottom: 0.5rem;">Reset Password</h2>
-        <p style="color: #64748b; margin-bottom: 1.5rem; font-size: 0.9rem;">Enter your email to receive a reset code</p>
+        <h2 style="margin-bottom: 0.5rem">Reset Password</h2>
+        <p style="color: #64748b; margin-bottom: 1.5rem; font-size: 0.9rem">
+          Enter your email to receive a reset code
+        </p>
 
         <!-- Step 1: Email -->
         <form id="forgot-email-form">
           <div class="form-group">
             <label for="forgot-email">Email Address</label>
-            <input type="email" id="forgot-email" required placeholder="Enter your email" />
+            <input
+              type="email"
+              id="forgot-email"
+              required
+              placeholder="Enter your email"
+            />
           </div>
-          <p id="forgot-email-error" style="color:#ef4444; font-size:0.85rem; margin-bottom:1rem; display:none;"></p>
-          <button type="submit" class="btn" style="width:100%;">Send Reset Code</button>
+          <p
+            id="forgot-email-error"
+            style="
+              color: #ef4444;
+              font-size: 0.85rem;
+              margin-bottom: 1rem;
+              display: none;
+            "
+          ></p>
+          <button type="submit" class="btn" style="width: 100%">
+            Send Reset Code
+          </button>
         </form>
 
         <!-- Step 2: Code + New Password -->
-        <form id="forgot-reset-form" style="display: none;">
+        <form id="forgot-reset-form" style="display: none">
           <div class="form-group">
             <label for="reset-code">Reset Code</label>
-            <input type="text" id="reset-code" required placeholder="Enter 6-digit code" maxlength="6" />
+            <input
+              type="text"
+              id="reset-code"
+              required
+              placeholder="Enter 6-digit code"
+              maxlength="6"
+            />
           </div>
           <div class="form-group">
             <label for="new-password">New Password</label>
-            <input type="password" id="new-password" required placeholder="Enter new password" />
+            <input
+              type="password"
+              id="new-password"
+              required
+              placeholder="Enter new password"
+            />
           </div>
           <div class="form-group">
             <label for="confirm-password">Confirm Password</label>
-            <input type="password" id="confirm-password" required placeholder="Confirm new password" />
+            <input
+              type="password"
+              id="confirm-password"
+              required
+              placeholder="Confirm new password"
+            />
           </div>
-          <p id="forgot-reset-error" style="color:#ef4444; font-size:0.85rem; margin-bottom:1rem; display:none;"></p>
-          <button type="submit" class="btn" style="width:100%;">Reset Password</button>
+          <p
+            id="forgot-reset-error"
+            style="
+              color: #ef4444;
+              font-size: 0.85rem;
+              margin-bottom: 1rem;
+              display: none;
+            "
+          ></p>
+          <button type="submit" class="btn" style="width: 100%">
+            Reset Password
+          </button>
         </form>
 
-        <div id="forgot-loading" style="display:none; text-align:center; padding:1rem;">
-          <span style="color:var(--primary);">Processing...</span>
+        <div
+          id="forgot-loading"
+          style="display: none; text-align: center; padding: 1rem"
+        >
+          <span style="color: var(--primary)">Processing...</span>
         </div>
 
-        <p style="text-align:center; margin-top:1rem;">
-          <a href="#" id="back-to-login" style="color:#64748b; font-size:0.85rem;">Back to Login</a>
+        <p style="text-align: center; margin-top: 1rem">
+          <a
+            href="#"
+            id="back-to-login"
+            style="color: #64748b; font-size: 0.85rem"
+            >Back to Login</a
+          >
         </p>
       </div>
     </div>
@@ -122,7 +204,7 @@
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         initApp("login");
-        
+
         let resetEmail = "";
         const modal = document.getElementById("forgot-modal");
         const emailForm = document.getElementById("forgot-email-form");
@@ -130,30 +212,38 @@
         const loadingEl = document.getElementById("forgot-loading");
 
         // Open forgot password modal
-        document.getElementById("forgot-password-link").addEventListener("click", (e) => {
-          e.preventDefault();
-          resetEmail = "";
-          emailForm.style.display = "block";
-          resetForm.style.display = "none";
-          document.getElementById("forgot-email-error").style.display = "none";
-          document.getElementById("forgot-reset-error").style.display = "none";
-          document.getElementById("forgot-email").value = "";
-          document.getElementById("reset-code").value = "";
-          document.getElementById("new-password").value = "";
-          document.getElementById("confirm-password").value = "";
-          modal.style.display = "flex";
-        });
+        document
+          .getElementById("forgot-password-link")
+          .addEventListener("click", (e) => {
+            e.preventDefault();
+            resetEmail = "";
+            emailForm.style.display = "block";
+            resetForm.style.display = "none";
+            document.getElementById("forgot-email-error").style.display =
+              "none";
+            document.getElementById("forgot-reset-error").style.display =
+              "none";
+            document.getElementById("forgot-email").value = "";
+            document.getElementById("reset-code").value = "";
+            document.getElementById("new-password").value = "";
+            document.getElementById("confirm-password").value = "";
+            modal.style.display = "flex";
+          });
 
         // Close modal
-        document.getElementById("forgot-modal-close").addEventListener("click", () => {
-          modal.style.display = "none";
-        });
+        document
+          .getElementById("forgot-modal-close")
+          .addEventListener("click", () => {
+            modal.style.display = "none";
+          });
 
         // Back to login
-        document.getElementById("back-to-login").addEventListener("click", (e) => {
-          e.preventDefault();
-          modal.style.display = "none";
-        });
+        document
+          .getElementById("back-to-login")
+          .addEventListener("click", (e) => {
+            e.preventDefault();
+            modal.style.display = "none";
+          });
 
         // Send reset code
         emailForm.addEventListener("submit", async (e) => {
@@ -186,7 +276,8 @@
               resetForm.style.display = "block";
               showToast("Reset code sent to your email!");
             } else {
-              errorEl.textContent = data.message || "Failed to send reset code.";
+              errorEl.textContent =
+                data.message || "Failed to send reset code.";
               errorEl.style.display = "block";
             }
           } catch (err) {
@@ -201,7 +292,8 @@
           e.preventDefault();
           const code = document.getElementById("reset-code").value.trim();
           const newPassword = document.getElementById("new-password").value;
-          const confirmPassword = document.getElementById("confirm-password").value;
+          const confirmPassword =
+            document.getElementById("confirm-password").value;
           const errorEl = document.getElementById("forgot-reset-error");
 
           if (!code || code.length !== 6) {
