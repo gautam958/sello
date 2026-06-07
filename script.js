@@ -687,8 +687,19 @@ async function loadMarketplaceItems() {
     setupItemFilterControls();
     applyItemFilters();
   } catch (err) {
-    grid.innerHTML =
-      '<p style="color: var(--danger-color);">Failed to load items.</p>';
+    grid.innerHTML = `
+      <div style="text-align:center; padding: 2rem; max-width: 400px; margin: 0 auto;">
+        <p style="color: var(--danger-color); font-size: 1.1rem; margin-bottom: 1rem;">
+          We are updating our catalog, please try again in a few minutes.
+        </p>
+        <p style="color: #666; font-size: 0.9rem; text-align: left;">
+          <strong>Troubleshooting:</strong><br>
+          • Hard Refresh: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> (Windows) or <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> (Mac)<br>
+          • Clear browser cache: Settings → Privacy → Clear browsing data<br>
+          • Or open in a private/incognito window
+        </p>
+      </div>
+    `;
   }
 }
 
