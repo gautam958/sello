@@ -889,7 +889,7 @@ function closeAuthModal() {
 // Tab switching
 document.addEventListener("DOMContentLoaded", () => {
   // Initialize Google Sign-In buttons with correct auth URL
-  ["google-signin-btn", "google-signup-btn"].forEach((id) => {
+  ["google-signin-btn", "google-signup-btn", "google-auth-btn"].forEach((id) => {
     const btn = document.getElementById(id);
     if (btn) {
       btn.addEventListener("click", (e) => {
