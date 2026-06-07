@@ -37,6 +37,9 @@ function escapeHtml(str) {
 
 // Application state configuration initialization
 function initApp(page) {
+  // Handle Google OAuth callback
+  handleGoogleOAuthCallback();
+  
   setupNavbar();
   trackVisit();
   startCountdown();
@@ -67,6 +70,47 @@ function initApp(page) {
     loadUserWishlistPage();
   } else if (page === "admin-wishlist") {
     checkAdminAccess();
+  }
+}
+
+// Handle Google OAuth callback - extract token and user from URL params
+function handleGoogleOAuthCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const googleToken = params.get("google_token");
+  const googleUser = params.get("google_user");
+  
+  if (googleToken && googleUser) {
+    try {
+      // Store the token and user in sessionStorage
+      sessionStorage.setItem("sello_token", googleToken);
+      sessionStorage.setItem("sello_user", googleUser);
+      
+      // Clean up URL parameters
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl);
+      
+      // Show success toast
+      const userData = JSON.parse(googleUser);
+      showToast(`Welcome, ${userData.googleName || userData.username}! Signed in with Google.`);
+    } catch (e) {
+      console.error("Error handling Google OAuth callback:", e);
+    }
+  }
+  
+  // Handle error params
+  const error = params.get("error");
+  if (error) {
+    const errorMessages = {
+      google_auth_failed: "Google sign-in failed. Please try again.",
+      google_auth_error: "An error occurred during Google sign-in.",
+      google_oauth_not_configured: "Google sign-in is not configured. Please contact the administrator.",
+    };
+    const message = errorMessages[error] || "Authentication failed. Please try again.";
+    showToast(message, "error");
+    
+    // Clean up URL parameters
+    const cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, document.title, cleanUrl);
   }
 }
 
@@ -504,7 +548,22 @@ function setupNavbar() {
       // Regular user - show wishlist link
       html += link("wishlist.html", "♥ Wishlist");
     }
-    html += `<span class="nav-user">Welcome, ${user.username} (${user.role})</span>`;
+    
+    // User info with profile picture support
+    let userInfo = `<span class="nav-user">`;
+    
+    // Add Google profile picture if available
+    if (user.googlePicture) {
+      userInfo += `<img src="${user.googlePicture}" alt="Profile" class="nav-user-avatar" />`;
+    } else {
+      // Fall back to initial avatar
+      const initial = (user.username || "U").charAt(0).toUpperCase();
+      userInfo += `<span class="nav-user-initial">${initial}</span>`;
+    }
+    
+    userInfo += `<span class="nav-user-name">Welcome, ${user.googleName || user.username} (${user.role})</span>`;
+    userInfo += `</span>`;
+    html += userInfo;
     html += `<button id="logout-btn" class="btn nav-logout">Logout</button>`;
   } else {
     html += link("login.html", "Login");

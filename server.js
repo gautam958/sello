@@ -5,6 +5,9 @@ const cors = require("cors");
 const multer = require("multer");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const session = require("express-session");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,6 +33,21 @@ app.use((req, res, next) => {
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
+
+// Session configuration for OAuth flow
+const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+app.use(
+  session({
+    secret: SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: true, // Required for HTTPS
+      httpOnly: true,
+      maxAge: 10 * 60 * 1000, // 10 minutes (just for OAuth flow)
+    },
+  })
+);
 
 app.use(express.json());
 
@@ -112,6 +130,89 @@ transporter.verify((err) => {
     console.log("SMTP verify OK on startup — Gmail accepted the credentials.");
   }
 });
+
+// ─── Google OAuth Configuration ─────────────────────────────────────────────
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
+const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || "http://localhost:3000/auth/google/callback";
+
+if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+  console.log("Google OAuth credentials configured.");
+} else {
+  console.warn("Google OAuth NOT configured: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required.");
+}
+
+// Passport initialization
+app.use(passport.initialize());
+
+// Configure Google OAuth Strategy
+if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: GOOGLE_CLIENT_ID,
+        clientSecret: GOOGLE_CLIENT_SECRET,
+        callbackURL: GOOGLE_CALLBACK_URL,
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          // Get existing users
+          const users = await readData(USERS_FILE);
+          
+          // Check if user already exists with this Google ID
+          let user = users.find((u) => u.googleId === profile.id);
+          
+          if (user) {
+            // Update last login
+            user.lastLogin = new Date().toISOString();
+            await writeData(USERS_FILE, users);
+            return done(null, user);
+          }
+          
+          // Create new Google user
+          const username = profile.displayName.replace(/\s+/g, "_").toLowerCase() + "_" + Date.now().toString(36);
+          const newUser = {
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+            username: username,
+            email: profile.emails?.[0]?.value || "",
+            googleId: profile.id,
+            googleEmail: profile.emails?.[0]?.value || "",
+            googleName: profile.displayName,
+            googlePicture: profile.photos?.[0]?.value || "",
+            authProvider: "google",
+            role: "user",
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+          };
+          
+          users.push(newUser);
+          await writeData(USERS_FILE, users);
+          
+          return done(null, newUser);
+        } catch (err) {
+          console.error("Google OAuth error:", err);
+          return done(err, null);
+        }
+      }
+    )
+  );
+
+  // Serialize user for session
+  passport.serializeUser((user, done) => {
+    done(null, user.id);
+  });
+
+  // Deserialize user from session
+  passport.deserializeUser(async (id, done) => {
+    try {
+      const users = await readData(USERS_FILE);
+      const user = users.find((u) => u.id === id);
+      done(null, user);
+    } catch (err) {
+      done(err, null);
+    }
+  });
+}
 
 // Centralized mail sender. Never throws — logs failures so the request still succeeds even
 // when SMTP credentials are placeholders or unreachable.
@@ -429,6 +530,89 @@ app.post("/api/login", async (req, res) => {
     res.status(500).json({ message: "Internal runtime server context error." });
   }
 });
+
+// ─── Google OAuth Routes ─────────────────────────────────────────────────────
+
+// GET /auth/google - Initiate Google OAuth flow
+app.get(
+  "/auth/google",
+  (req, res, next) => {
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      return res.status(503).json({ 
+        message: "Google OAuth is not configured. Please contact the administrator." 
+      });
+    }
+    
+    // Store the return URL (default to index.html)
+    const returnUrl = req.query.return || "index.html";
+    req.session.oauthReturnUrl = returnUrl;
+    
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+      prompt: "select_account",
+    })(req, res, next);
+  }
+);
+
+// GET /auth/google/callback - Handle OAuth callback
+app.get(
+  "/auth/google/callback",
+  (req, res, next) => {
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      return res.redirect("/login.html?error=google_oauth_not_configured");
+    }
+    next();
+  },
+  passport.authenticate("google", { failureRedirect: "/login.html?error=google_auth_failed" }),
+  async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.redirect("/login.html?error=google_auth_failed");
+      }
+
+      // Generate token for the user
+      const cleanUser = { ...req.user };
+      delete cleanUser.password;
+      delete cleanUser.passwordEnc;
+
+      const token = signToken({
+        username: cleanUser.username,
+        role: cleanUser.role,
+        isGoogleUser: true,
+      });
+
+      // Log the login activity
+      await logActivity("google_login", `${cleanUser.username} logged in with Google`, {
+        user: cleanUser.username,
+        details: `googleId: ${cleanUser.googleId}`,
+      });
+
+      // Get return URL from session or default to index.html
+      const returnUrl = req.session.oauthReturnUrl || "index.html";
+      delete req.session.oauthReturnUrl;
+
+      // Notify owner
+      sendMail({
+        to: OWNER_EMAIL,
+        subject: `Sello: ${cleanUser.username} logged in with Google`,
+        html: `
+          <h2>Google Login Activity</h2>
+          <p><strong>User:</strong> ${cleanUser.username}</p>
+          <p><strong>Email:</strong> ${cleanUser.googleEmail || "—"}</p>
+          <p><strong>Google Name:</strong> ${cleanUser.googleName || "—"}</p>
+          <p><strong>Time:</strong> ${new Date().toUTCString()}</p>
+        `,
+      });
+
+      // Redirect with token
+      const separator = returnUrl.includes("?") ? "&" : "?";
+      res.redirect(`${returnUrl}${separator}google_token=${token}&google_user=${encodeURIComponent(JSON.stringify(cleanUser))}`);
+    } catch (err) {
+      console.error("Google OAuth callback error:", err);
+      res.redirect("/login.html?error=google_auth_error");
+    }
+  }
+);
 
 // ─── Forgot Password ───────────────────────────────────────────────────────
 
