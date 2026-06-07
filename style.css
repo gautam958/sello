@@ -219,8 +219,7 @@ nav #logout-btn:hover,
 /* Disabled status buttons - matching badge colors */
 .btn-status-sold,
 .btn-status-pickup-scheduled,
-.btn-status-booked,
-.btn-status-available {
+.btn-status-booked {
   cursor: default;
   border: none;
   opacity: 0.85;
@@ -246,6 +245,16 @@ nav #logout-btn:hover,
 .btn-status-pickup-scheduled:hover {
   transform: none;
   box-shadow: none;
+}
+
+/* Available / Book / Place Bid button - Green to match Available badge */
+.btn-status-available {
+  background-color: #16a34a;
+  color: #ffffff;
+}
+
+.btn-status-available:hover {
+  background-color: #15803d;
 }
 
 /* Core Form Group Field Design Parameters */

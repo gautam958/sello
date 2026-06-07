@@ -645,7 +645,7 @@ function renderMarketplaceItems(visibleItems) {
                     <span class="price">HK$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
                     ${
                       canBid
-                        ? `<button class="btn open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">Book / Place Bid</button>`
+                        ? `<button class="btn btn-status-available open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">Book / Place Bid</button>`
                         : `<button class="btn btn-status-${item.status.toLowerCase().replace(/\s+/g, '-')}" disabled>${item.status}</button>`
                     }
                 </div>
