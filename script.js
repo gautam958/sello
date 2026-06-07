@@ -490,25 +490,25 @@ function setupNavbar() {
     return `<a href="${href}"${classes ? ` class="${classes}"` : ""}>${label}</a>`;
   };
 
-  let html = link("index.html", "Home");
-  html += link("contact.html", "📧 Contact");
+  let html = link("index.html", "🏠 Home");
 
   if (user) {
     if (user.role === "admin") {
-      html += link("admin.html", "Admin Items");
-      html += link("users.html", "Manage Users");
-      html += link("logs.html", "Logs");
-      html += link("visitors.html", "Visitors");
-      html += link("admin-wishlist.html", "Wishlists");
+      html += link("admin.html", "📦 Items");
+      html += link("users.html", "👥 Users");
+      html += link("logs.html", "📋 Logs");
+      html += link("visitors.html", "👁️ Visitors");
+      html += link("admin-wishlist.html", "♥ Wishlists");
     } else {
-      // Regular user - show wishlist link
       html += link("wishlist.html", "♥ Wishlist");
     }
-    html += `<span class="nav-user">Welcome, ${user.username} (${user.role})</span>`;
-    html += `<button id="logout-btn" class="btn nav-logout">Logout</button>`;
+    html += link("contact.html", "📧 Contact");
+    html += `<span class="nav-user"><span class="nav-user-icon">👤</span>${user.username}</span>`;
+    html += `<button id="logout-btn" class="btn nav-logout">🚪 Logout</button>`;
   } else {
-    html += link("login.html", "Login");
-    html += link("signup.html", "Register", "btn");
+    html += link("login.html", "🔐 Login");
+    html += link("signup.html", "📝 Register", "btn");
+    html += link("contact.html", "📧 Contact");
   }
   nav.innerHTML = html;
 
