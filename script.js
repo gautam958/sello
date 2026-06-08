@@ -442,11 +442,16 @@ function renderLiveBids(bids, container) {
         bid.itemStatus && bid.itemStatus !== "Available"
           ? `<span class="live-bid-status-badge live-bid-status-${bid.itemStatus.toLowerCase().replace(/\s+/g, "-")}">${bid.itemStatus.toUpperCase()}</span>`
           : "";
+      // Discount badge for live bids
+      const bidDiscount = parseInt(bid.discount, 10) || 0;
+      const discountBadge = bidDiscount > 0
+        ? `<span class="discount-badge discount-badge-live">★ ${bidDiscount}% OFF</span>`
+        : "";
       return `
     <div class="live-bid-item fade-in" style="animation-delay: ${index * 80}ms" onclick="scrollToItem('${bid.itemId}')">
       <img src="${imgSrc}" alt="${escapeHtml(bid.itemName)}" class="live-bid-img" onerror="this.src='https://placehold.co/80x60?text=No+Image'; this.onerror=null;">
       <div class="live-bid-content">
-        <div class="live-bid-amount">HK$ ${bid.amount.toLocaleString()} ${statusBadge}</div>
+        <div class="live-bid-amount">HK$ ${bid.amount.toLocaleString()} ${statusBadge} ${discountBadge}</div>
         <div class="live-bid-name">${escapeHtml(bid.itemName)}</div>
         <div class="live-bid-time">${formatTimeAgo(bid.timestamp)}</div>
       </div>
@@ -751,7 +756,7 @@ function renderMarketplaceItems(visibleItems) {
                     ${priceHTML}
                     ${
                       canBid
-                        ? `<button class="btn btn-status-available open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">Book / Place Bid</button>`
+                        ? `<button class="btn btn-status-available open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}" data-discount="${hasDiscount ? discount : 0}" data-discounted-price="${hasDiscount ? discountedPrice : ''}">Book / Place Bid</button>`
                         : `<button class="btn btn-status-${item.status.toLowerCase().replace(/\s+/g, "-")}" disabled>${item.status}</button>`
                     }
                 </div>
@@ -865,6 +870,8 @@ function setupModalTriggers() {
           name: btn.getAttribute("data-name"),
           price: parseFloat(btn.getAttribute("data-price")),
           highest: parseFloat(btn.getAttribute("data-highest")),
+          discount: parseInt(btn.getAttribute("data-discount"), 10) || 0,
+          discountedPrice: btn.getAttribute("data-discounted-price") || null,
         };
         // Show inline auth modal instead of redirecting
         openAuthModal();
@@ -877,13 +884,44 @@ function setupModalTriggers() {
       const highestBidValue = parseFloat(
         buttonTarget.getAttribute("data-highest"),
       );
+      const itemDiscount = parseInt(buttonTarget.getAttribute("data-discount"), 10) || 0;
+      const itemDiscountedPrice = buttonTarget.getAttribute("data-discounted-price");
+      const effectivePrice = (itemDiscount > 0 && itemDiscountedPrice)
+        ? parseFloat(itemDiscountedPrice) : baselinePrice;
       const dynamicDefaultValue =
-        highestBidValue > 0 ? highestBidValue + 1.0 : baselinePrice;
+        highestBidValue > 0 ? highestBidValue + 1.0 : effectivePrice;
 
       document.getElementById("modal-item-name").innerText =
         buttonTarget.getAttribute("data-name");
+
+      // Discount badge in modal
+      const discountBadgeWrapper = document.getElementById("modal-discount-badge-wrapper");
+      const discountPctEl = document.getElementById("modal-discount-pct");
+      if (itemDiscount > 0) {
+        discountBadgeWrapper.style.display = "";
+        discountPctEl.textContent = itemDiscount;
+      } else {
+        discountBadgeWrapper.style.display = "none";
+      }
+
+      // Original price row + savings
+      const origRow = document.getElementById("modal-price-original-row");
+      const savingsRow = document.getElementById("modal-savings-row");
+      const savingsAmountEl = document.getElementById("modal-savings-amount");
+      if (itemDiscount > 0) {
+        origRow.style.display = "";
+        document.getElementById("modal-item-price-original").innerText = `HK$${baselinePrice.toFixed(2)}`;
+        const savings = baselinePrice - effectivePrice;
+        savingsRow.style.display = "";
+        savingsAmountEl.innerText = `HK$${savings.toFixed(2)}`;
+      } else {
+        origRow.style.display = "none";
+        savingsRow.style.display = "none";
+      }
+
+      // Discounted / minimum price
       document.getElementById("modal-item-price").innerText =
-        `HK$${baselinePrice.toFixed(2)}`;
+        `HK$${effectivePrice.toFixed(2)}`;
       document.getElementById("modal-highest-bid").innerText =
         highestBidValue > 0 ? `HK$${highestBidValue.toFixed(2)}` : "None";
       document.getElementById("bid-amount").value =
@@ -1129,12 +1167,42 @@ document.addEventListener("DOMContentLoaded", () => {
 function openBidModalFromItem(item) {
   currentTargetBidId = item.id;
   const highestBidValue = item.highest > 0 ? item.highest : item.price;
+  const itemDiscount = parseInt(item.discount, 10) || 0;
+  const effectivePrice = (itemDiscount > 0 && item.discountedPrice)
+    ? parseFloat(item.discountedPrice) : item.price;
   const dynamicDefaultValue =
-    highestBidValue > 0 ? highestBidValue + 1.0 : item.price;
+    highestBidValue > 0 ? highestBidValue + 1.0 : effectivePrice;
 
   document.getElementById("modal-item-name").innerText = item.name;
+
+  // Discount badge in modal
+  const discountBadgeWrapper = document.getElementById("modal-discount-badge-wrapper");
+  const discountPctEl = document.getElementById("modal-discount-pct");
+  if (itemDiscount > 0) {
+    discountBadgeWrapper.style.display = "";
+    discountPctEl.textContent = itemDiscount;
+  } else {
+    discountBadgeWrapper.style.display = "none";
+  }
+
+  // Original price row + savings
+  const origRow = document.getElementById("modal-price-original-row");
+  const savingsRow = document.getElementById("modal-savings-row");
+  const savingsAmountEl = document.getElementById("modal-savings-amount");
+  if (itemDiscount > 0) {
+    origRow.style.display = "";
+    document.getElementById("modal-item-price-original").innerText = `HK$${item.price.toFixed(2)}`;
+    const savings = item.price - effectivePrice;
+    savingsRow.style.display = "";
+    savingsAmountEl.innerText = `HK$${savings.toFixed(2)}`;
+  } else {
+    origRow.style.display = "none";
+    savingsRow.style.display = "none";
+  }
+
+  // Discounted / minimum price
   document.getElementById("modal-item-price").innerText =
-    `HK$${item.price.toFixed(2)}`;
+    `HK$${effectivePrice.toFixed(2)}`;
   document.getElementById("modal-highest-bid").innerText =
     highestBidValue > 0 ? `HK$${highestBidValue.toFixed(2)}` : "None";
   document.getElementById("bid-amount").value = dynamicDefaultValue.toFixed(2);

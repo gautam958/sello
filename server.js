@@ -830,6 +830,8 @@ app.get("/api/recent-bids", async (req, res) => {
             itemId: item.id,
             itemName: item.name,
             itemImage: item.image,
+            itemPrice: item.price,
+            discount: item.discount || 0,
             amount: bid.bidAmount,
             timestamp: bid.timestamp,
             itemStatus: item.status,

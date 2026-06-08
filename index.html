@@ -109,10 +109,17 @@
       <div class="modal-content">
         <span class="close-btn" id="modal-cancel-btn">&times;</span>
         <h2>Place Your Bid</h2>
+        <div id="modal-discount-badge-wrapper" style="display:none;"><span class="discount-badge discount-badge-modal">★ <span id="modal-discount-pct"></span>% OFF</span></div>
         <div class="bid-info">
           <p><strong>Item:</strong> <span id="modal-item-name"></span></p>
-          <p>
+          <p id="modal-price-original-row" style="display:none;">
+            <strong>Original Price:</strong> <span id="modal-item-price-original" style="text-decoration:line-through;color:#94a3b8;"></span>
+          </p>
+          <p id="modal-price-discounted-row">
             <strong>Minimum Price:</strong> <span id="modal-item-price"></span>
+          </p>
+          <p id="modal-savings-row" style="display:none;" class="modal-savings">
+            <span class="modal-savings-icon">🎉</span> You save <strong id="modal-savings-amount"></strong>
           </p>
           <p>
             <strong>Current Highest Bid:</strong>
