@@ -47,6 +47,12 @@
               <input type="number" id="item-price" step="0.01" required />
             </div>
             <div class="form-group">
+              <label for="item-discount">Discount (%)</label>
+              <div class="discount-input-wrapper">
+                <input type="number" id="item-discount" min="0" max="90" step="1" placeholder="0" style="padding-right: 2rem;" />
+              </div>
+            </div>
+            <div class="form-group">
               <label for="item-image">Product Image</label>
               <input type="file" id="item-image" accept="image/*" />
             </div>
@@ -132,6 +138,7 @@
               <th>Name</th>
               <th>Description</th>
               <th>Price</th>
+              <th>Discount</th>
               <th>Highest Bid</th>
               <th>Current Status</th>
               <th>Visibility</th>

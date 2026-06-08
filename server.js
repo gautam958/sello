@@ -797,14 +797,14 @@ app.post("/api/auth/reset-password", async (req, res) => {
 // READ MARKETPLACE ITEMS (public — only enabled items, sensitive fields stripped)
 app.get("/api/items", async (req, res) => {
   try {
-    const items = await readData(ITEMS_FILE);
-    const publicItems = items
+    const items = await readData(ITEMS_FILE);      const publicItems = items
       .filter((i) => i.enabled)
       .map((i) => ({
         id: i.id,
         name: i.name,
         description: i.description,
         price: i.price,
+        discount: i.discount || 0,
         status: i.status,
         image: i.image,
         bidsCount: i.bids ? i.bids.length : 0,
@@ -1208,11 +1208,13 @@ app.post(
         status === "Sold"
           ? req.body.bookedUser || ""
           : "";
+      const discountVal = parseInt(req.body.discount, 10);
       const newItem = {
         id: Date.now().toString(),
         name: req.body.name,
         description: req.body.description,
         price: parseFloat(req.body.price),
+        discount: (!isNaN(discountVal) && discountVal > 0 && discountVal <= 90) ? discountVal : 0,
         status,
         bookedUser,
         // Storing ONLY the raw filename to isolate file storage paths out of data rows
@@ -1272,10 +1274,12 @@ app.put(
         status === "Sold"
           ? req.body.bookedUser || ""
           : "";
+      const discountVal = parseInt(req.body.discount, 10);
       const updatedFields = {
         name: req.body.name,
         description: req.body.description,
         price: parseFloat(req.body.price),
+        discount: (!isNaN(discountVal) && discountVal > 0 && discountVal <= 90) ? discountVal : 0,
         enabled: req.body.enabled === "true",
         status,
         bookedUser,

@@ -638,10 +638,6 @@ h2 {
   margin-bottom: 1rem;
   line-height: 1.6;
   flex-grow: 1;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .card-footer {
@@ -660,6 +656,59 @@ h2 {
   font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--secondary);
+}
+
+/* ── Discount Display ─────────────────────────────────────────── */
+.price-old {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-decoration: line-through;
+  line-height: 1.2;
+}
+
+.price-new {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--danger);
+  line-height: 1.2;
+}
+
+.discount-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+  margin-left: 0.5rem;
+  white-space: nowrap;
+  animation: discountPulse 0.6s ease-out 1;
+}
+
+.discount-badge::before {
+  content: '★';
+  font-size: 0.65rem;
+}
+
+@keyframes discountPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.price-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
 }
 
 /* ── Status Badge ─────────────────────────────────────────────── */
@@ -688,6 +737,23 @@ h2 {
   background: rgba(16, 185, 129, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-right: none;
+}
+
+/* ── Admin Discount Field ─────────────────────────────────────── */
+.discount-input-wrapper {
+  position: relative;
+}
+
+.discount-input-wrapper::after {
+  content: '%';
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.9rem;
+  pointer-events: none;
 }
 
 .status-booked {
