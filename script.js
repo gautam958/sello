@@ -653,9 +653,13 @@ function applyItemFilters() {
   const search = (searchEl?.value || "").trim().toLowerCase();
   const status = statusEl?.value || "all";
   const sort = sortEl?.value || "default";
+  const onSaleEl = document.getElementById("filter-onsale");
+  const onSaleOnly = onSaleEl?.checked || false;
 
   let list = __allMarketItems.filter((item) => {
     if (status !== "all" && (item.status || "Available") !== status)
+      return false;
+    if (onSaleOnly && !(parseInt(item.discount, 10) > 0))
       return false;
     if (search) {
       const hay = `${item.name || ""} ${item.description || ""}`.toLowerCase();
@@ -672,6 +676,8 @@ function applyItemFilters() {
     list.sort((a, b) => (b.bidsCount || 0) - (a.bidsCount || 0));
   } else if (sort === "name-asc") {
     list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  } else if (sort === "discount-desc") {
+    list.sort((a, b) => (parseInt(b.discount, 10) || 0) - (parseInt(a.discount, 10) || 0));
   } else {
     // default: pin featured item on top, shuffle the rest randomly
     const featured = list.find((i) => i.id === __featuredItemId);
@@ -696,6 +702,11 @@ function renderMarketplaceItems(visibleItems) {
     .map((item) => {
       const topBidValue = item.highestBid || 0;
       const processingBaselinePrice = item.price;
+      const discount = parseInt(item.discount, 10) || 0;
+      const hasDiscount = discount > 0 && discount <= 90;
+      const discountedPrice = hasDiscount
+        ? (processingBaselinePrice * (1 - discount / 100)).toFixed(2)
+        : null;
 
       const imgSrc = resolveImageSrc(
         item.image,
@@ -713,6 +724,14 @@ function renderMarketplaceItems(visibleItems) {
       const statusLabel = item.status || "Available";
       const canBid = item.status === "Available";
 
+      const priceHTML = hasDiscount
+        ? `<div class="price-container">
+              <span class="price-old">HK$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
+              <span class="price-new">HK$${discountedPrice}</span>
+              <span class="discount-badge">${discount}% OFF</span>
+           </div>`
+        : `<span class="price">HK$${parseFloat(processingBaselinePrice).toFixed(2)}</span>`;
+
       return `
         <div class="card" data-id="${item.id}">
             <div class="card-img-wrapper">
@@ -729,7 +748,7 @@ function renderMarketplaceItems(visibleItems) {
                 <p class="card-desc">${item.description}</p>
                 <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Bids: ${item.bidsCount || 0}</p>
                 <div class="card-footer">
-                    <span class="price">HK$${parseFloat(processingBaselinePrice).toFixed(2)}</span>
+                    ${priceHTML}
                     ${
                       canBid
                         ? `<button class="btn btn-status-available open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}">Book / Place Bid</button>`
@@ -756,10 +775,14 @@ function setupItemFilterControls() {
   search.addEventListener("input", applyItemFilters);
   status.addEventListener("change", applyItemFilters);
   sort.addEventListener("change", applyItemFilters);
+  const onSaleCheckbox = document.getElementById("filter-onsale");
+  if (onSaleCheckbox) onSaleCheckbox.addEventListener("change", applyItemFilters);
   reset.addEventListener("click", () => {
     search.value = "";
     status.value = "all";
     sort.value = "default";
+    const onSaleReset = document.getElementById("filter-onsale");
+    if (onSaleReset) onSaleReset.checked = false;
     applyItemFilters();
   });
 }
@@ -1291,6 +1314,7 @@ async function loadAdminDashboard() {
               <td>${item.name}</td>
               <td>${item.description}</td>
               <td>HK$${parseFloat(item.price).toFixed(2)}</td>
+              <td>${item.discount ? item.discount + '%' : '—'}</td>
               <td>HK$${parseFloat(topBidValue).toFixed(2)}</td>
               <td><span class="status-badge ${
                 item.status === "Booked"
@@ -1382,6 +1406,7 @@ async function loadAdminDashboard() {
     const formData = new FormData();
     formData.append("name", document.getElementById("item-name").value);
     formData.append("price", document.getElementById("item-price").value);
+    formData.append("discount", document.getElementById("item-discount").value || "0");
     formData.append("description", document.getElementById("item-desc").value);
     formData.append("enabled", document.getElementById("item-enabled").checked);
     formData.append("status", document.getElementById("item-status").value);
@@ -1421,6 +1446,7 @@ async function loadAdminDashboard() {
     cancelBtn.addEventListener("click", () => {
       form.reset();
       document.getElementById("item-id").value = "";
+      document.getElementById("item-discount").value = "";
       cancelBtn.style.display = "none";
       document.getElementById("form-submit-btn").innerText = "Save Product";
     });
@@ -1437,6 +1463,7 @@ function populateEditForm(itemOrItems, id) {
   document.getElementById("item-id").value = item.id;
   document.getElementById("item-name").value = item.name;
   document.getElementById("item-price").value = item.price;
+  document.getElementById("item-discount").value = item.discount || "";
   document.getElementById("item-desc").value = item.description;
   document.getElementById("item-enabled").checked = item.enabled;
 
