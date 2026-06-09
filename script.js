@@ -444,9 +444,10 @@ function renderLiveBids(bids, container) {
           : "";
       // Discount badge for live bids
       const bidDiscount = parseInt(bid.discount, 10) || 0;
-      const discountBadge = bidDiscount > 0
-        ? `<span class="discount-badge discount-badge-live">★ ${bidDiscount}% OFF</span>`
-        : "";
+      const discountBadge =
+        bidDiscount > 0
+          ? `<span class="discount-badge discount-badge-live">★ ${bidDiscount}% OFF</span>`
+          : "";
       return `
     <div class="live-bid-item fade-in" style="animation-delay: ${index * 80}ms" onclick="scrollToItem('${bid.itemId}')">
       <img src="${imgSrc}" alt="${escapeHtml(bid.itemName)}" class="live-bid-img" onerror="this.src='https://placehold.co/80x60?text=No+Image'; this.onerror=null;">
@@ -664,8 +665,7 @@ function applyItemFilters() {
   let list = __allMarketItems.filter((item) => {
     if (status !== "all" && (item.status || "Available") !== status)
       return false;
-    if (onSaleOnly && !(parseInt(item.discount, 10) > 0))
-      return false;
+    if (onSaleOnly && !(parseInt(item.discount, 10) > 0)) return false;
     if (search) {
       const hay = `${item.name || ""} ${item.description || ""}`.toLowerCase();
       if (!hay.includes(search)) return false;
@@ -682,7 +682,10 @@ function applyItemFilters() {
   } else if (sort === "name-asc") {
     list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   } else if (sort === "discount-desc") {
-    list.sort((a, b) => (parseInt(b.discount, 10) || 0) - (parseInt(a.discount, 10) || 0));
+    list.sort(
+      (a, b) =>
+        (parseInt(b.discount, 10) || 0) - (parseInt(a.discount, 10) || 0),
+    );
   } else {
     // default: pin featured item on top, shuffle the rest randomly
     const featured = list.find((i) => i.id === __featuredItemId);
@@ -754,11 +757,21 @@ function renderMarketplaceItems(visibleItems) {
                 <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Bids: ${item.bidsCount || 0}</p>
                 <div class="card-footer">
                     ${priceHTML}
+                    <div class="card-footer-actions">
                     ${
                       canBid
-                        ? `<button class="btn btn-status-available open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}" data-discount="${hasDiscount ? discount : 0}" data-discounted-price="${hasDiscount ? discountedPrice : ''}">Book / Place Bid</button>`
+                        ? `<a class="whatsapp-btn" href="https://wa.me/85253451910?text=${encodeURIComponent("Hello! I'm interested in the " + item.name + ". Is it still available?")}" target="_blank" rel="noopener noreferrer" title="Get in Touch via WhatsApp">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                        <span>Get in Touch</span>
+                    </a>`
+                        : ""
+                    }
+                    ${
+                      canBid
+                        ? `<button class="btn btn-status-available open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}" data-discount="${hasDiscount ? discount : 0}" data-discounted-price="${hasDiscount ? discountedPrice : ""}">Book Item</button>`
                         : `<button class="btn btn-status-${item.status.toLowerCase().replace(/\s+/g, "-")}" disabled>${item.status}</button>`
                     }
+                    </div>
                 </div>
             </div>
         </div>
@@ -781,7 +794,8 @@ function setupItemFilterControls() {
   status.addEventListener("change", applyItemFilters);
   sort.addEventListener("change", applyItemFilters);
   const onSaleCheckbox = document.getElementById("filter-onsale");
-  if (onSaleCheckbox) onSaleCheckbox.addEventListener("change", applyItemFilters);
+  if (onSaleCheckbox)
+    onSaleCheckbox.addEventListener("change", applyItemFilters);
   reset.addEventListener("click", () => {
     search.value = "";
     status.value = "all";
@@ -884,10 +898,15 @@ function setupModalTriggers() {
       const highestBidValue = parseFloat(
         buttonTarget.getAttribute("data-highest"),
       );
-      const itemDiscount = parseInt(buttonTarget.getAttribute("data-discount"), 10) || 0;
-      const itemDiscountedPrice = buttonTarget.getAttribute("data-discounted-price");
-      const effectivePrice = (itemDiscount > 0 && itemDiscountedPrice)
-        ? parseFloat(itemDiscountedPrice) : baselinePrice;
+      const itemDiscount =
+        parseInt(buttonTarget.getAttribute("data-discount"), 10) || 0;
+      const itemDiscountedPrice = buttonTarget.getAttribute(
+        "data-discounted-price",
+      );
+      const effectivePrice =
+        itemDiscount > 0 && itemDiscountedPrice
+          ? parseFloat(itemDiscountedPrice)
+          : baselinePrice;
       const dynamicDefaultValue =
         highestBidValue > 0 ? highestBidValue + 1.0 : effectivePrice;
 
@@ -895,7 +914,9 @@ function setupModalTriggers() {
         buttonTarget.getAttribute("data-name");
 
       // Discount badge in modal
-      const discountBadgeWrapper = document.getElementById("modal-discount-badge-wrapper");
+      const discountBadgeWrapper = document.getElementById(
+        "modal-discount-badge-wrapper",
+      );
       const discountPctEl = document.getElementById("modal-discount-pct");
       if (itemDiscount > 0) {
         discountBadgeWrapper.style.display = "";
@@ -910,7 +931,8 @@ function setupModalTriggers() {
       const savingsAmountEl = document.getElementById("modal-savings-amount");
       if (itemDiscount > 0) {
         origRow.style.display = "";
-        document.getElementById("modal-item-price-original").innerText = `HK$${baselinePrice.toFixed(2)}`;
+        document.getElementById("modal-item-price-original").innerText =
+          `HK$${baselinePrice.toFixed(2)}`;
         const savings = baselinePrice - effectivePrice;
         savingsRow.style.display = "";
         savingsAmountEl.innerText = `HK$${savings.toFixed(2)}`;
@@ -1168,15 +1190,19 @@ function openBidModalFromItem(item) {
   currentTargetBidId = item.id;
   const highestBidValue = item.highest > 0 ? item.highest : item.price;
   const itemDiscount = parseInt(item.discount, 10) || 0;
-  const effectivePrice = (itemDiscount > 0 && item.discountedPrice)
-    ? parseFloat(item.discountedPrice) : item.price;
+  const effectivePrice =
+    itemDiscount > 0 && item.discountedPrice
+      ? parseFloat(item.discountedPrice)
+      : item.price;
   const dynamicDefaultValue =
     highestBidValue > 0 ? highestBidValue + 1.0 : effectivePrice;
 
   document.getElementById("modal-item-name").innerText = item.name;
 
   // Discount badge in modal
-  const discountBadgeWrapper = document.getElementById("modal-discount-badge-wrapper");
+  const discountBadgeWrapper = document.getElementById(
+    "modal-discount-badge-wrapper",
+  );
   const discountPctEl = document.getElementById("modal-discount-pct");
   if (itemDiscount > 0) {
     discountBadgeWrapper.style.display = "";
@@ -1191,7 +1217,8 @@ function openBidModalFromItem(item) {
   const savingsAmountEl = document.getElementById("modal-savings-amount");
   if (itemDiscount > 0) {
     origRow.style.display = "";
-    document.getElementById("modal-item-price-original").innerText = `HK$${item.price.toFixed(2)}`;
+    document.getElementById("modal-item-price-original").innerText =
+      `HK$${item.price.toFixed(2)}`;
     const savings = item.price - effectivePrice;
     savingsRow.style.display = "";
     savingsAmountEl.innerText = `HK$${savings.toFixed(2)}`;
@@ -1382,7 +1409,7 @@ async function loadAdminDashboard() {
               <td>${item.name}</td>
               <td>${item.description}</td>
               <td>HK$${parseFloat(item.price).toFixed(2)}</td>
-              <td>${item.discount ? item.discount + '%' : '—'}</td>
+              <td>${item.discount ? item.discount + "%" : "—"}</td>
               <td>HK$${parseFloat(topBidValue).toFixed(2)}</td>
               <td><span class="status-badge ${
                 item.status === "Booked"
@@ -1474,7 +1501,10 @@ async function loadAdminDashboard() {
     const formData = new FormData();
     formData.append("name", document.getElementById("item-name").value);
     formData.append("price", document.getElementById("item-price").value);
-    formData.append("discount", document.getElementById("item-discount").value || "0");
+    formData.append(
+      "discount",
+      document.getElementById("item-discount").value || "0",
+    );
     formData.append("description", document.getElementById("item-desc").value);
     formData.append("enabled", document.getElementById("item-enabled").checked);
     formData.append("status", document.getElementById("item-status").value);
