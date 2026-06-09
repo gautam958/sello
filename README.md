@@ -35,11 +35,11 @@ Pages) talking to a Node API (Azure Web App).
   (in **HK$**), live bid count, and an availability status badge (`index.html`).
 - **Marketplace filters & randomized order** — a filter bar sits above the item grid with a
   **search** input (matches name + description), a **status** dropdown (All / Available /
-  Booked / Pickup Scheduled / Sold), a **sort** dropdown (Default / Price ↑ / Price ↓ / 
-  Most Bids / Name A→Z), and a **Reset** button. By default the first item from the server 
-  is pinned as a **featured** card at the top and the remaining items are shuffled on every 
-  page load (Fisher–Yates), so items that would otherwise sit at the bottom regularly surface 
-  near the top. Choosing any explicit sort overrides the random order; Reset restores the 
+  Booked / Pickup Scheduled / Sold), a **sort** dropdown (Default / Price ↑ / Price ↓ /
+  Most Bids / Name A→Z), and a **Reset** button. By default the first item from the server
+  is pinned as a **featured** card at the top and the remaining items are shuffled on every
+  page load (Fisher–Yates), so items that would otherwise sit at the bottom regularly surface
+  near the top. Choosing any explicit sort overrides the random order; Reset restores the
   featured + shuffled view.
 - **Status badge** — each card shows a colored badge overlaid on the item image:
   - _Available_ (green) - can be bid on
@@ -65,8 +65,8 @@ Pages) talking to a Node API (Azure Web App).
   stored so the admin User Management screen can reveal the real password on demand. The
   encryption key lives server-side (env), never in `users.json`.
 - **Admin dashboard** — full CRUD for products, image upload, enable/disable visibility,
-  per-item bid history, and **status management**: an admin can mark an item _Booked_, 
-  _Pickup Scheduled_, or _Sold_, and must select the user it is booked for (`admin.html`, 
+  per-item bid history, and **status management**: an admin can mark an item _Booked_,
+  _Pickup Scheduled_, or _Sold_, and must select the user it is booked for (`admin.html`,
   admin role required).
 - **Admin User Management** — a dedicated **Manage Users** page (`users.html`, top-menu link,
   admin only) to create, edit (email/mobile/role/password), and delete users, including a
@@ -221,10 +221,10 @@ npx serve .        # then open the printed URL
 
 ### Default accounts (seed data)
 
-| Username | Password           | Role  |
-| -------- | ------------------ | ----- |
-| `admin`  | `adminpassword123` | admin |
-| `user1`  | `userpassword123`  | user  |
+| Username | Password | Role  |
+| -------- | -------- | ----- |
+| `admin`  | `admin`  | admin |
+| `user1`  | `user`   | user  |
 
 > These are seed credentials for local development only. **Change or remove them before any
 > real deployment.** On first start with the current `server.js`, these plaintext seed
@@ -238,26 +238,27 @@ production use:
 
 Email and authentication are configured through **environment variables** (with safe placeholder defaults so the app still boots without real credentials):
 
-| Setting                  | Env var              | Default                        | Notes                                                                                             |
-| ------------------------ | -------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------- |
-| Gmail account            | `EMAIL_USER`         | `your-email-address@gmail.com` | Gmail address used as the sender.                                                                 |
-| Gmail app password       | `EMAIL_PASS`         | `your-app-password`            | Gmail [App Password](https://support.google.com/accounts/answer/185833), not your login password. |
-| Notification recipient   | `OWNER_EMAIL`        | `gautam958@gmail.com`          | Receives login / bid / booking notifications.                                                     |
-| Auth token secret        | `AUTH_SECRET`        | `sello-dev-secret-change-me`   | Signs/verifies login tokens (HMAC-SHA256). Set a strong value in production.                      |
-| Password encryption key  | `PASSWORD_ENC_KEY`   | falls back to `AUTH_SECRET`    | Key for the AES-256-GCM reversible password copy used by the admin screen.                        |
-| Session secret           | `SESSION_SECRET`     | auto-generated                 | For OAuth session management. Set a strong value in production.                                    |
-| Azure base URL           | `AZURE_BASE_URL`     | (none)                         | Your Azure App Service URL (e.g., `https://sello-xxx.azurewebsites.net`). Used for CORS and cookies. |
-| Server port              | `PORT`               | `3000`                         | `server.js` (`process.env.PORT`).                                                                 |
+| Setting                 | Env var            | Default                        | Notes                                                                                                |
+| ----------------------- | ------------------ | ------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Gmail account           | `EMAIL_USER`       | `your-email-address@gmail.com` | Gmail address used as the sender.                                                                    |
+| Gmail app password      | `EMAIL_PASS`       | `your-app-password`            | Gmail [App Password](https://support.google.com/accounts/answer/185833), not your login password.    |
+| Notification recipient  | `OWNER_EMAIL`      | `gautam958@gmail.com`          | Receives login / bid / booking notifications.                                                        |
+| Auth token secret       | `AUTH_SECRET`      | `sello-dev-secret-change-me`   | Signs/verifies login tokens (HMAC-SHA256). Set a strong value in production.                         |
+| Password encryption key | `PASSWORD_ENC_KEY` | falls back to `AUTH_SECRET`    | Key for the AES-256-GCM reversible password copy used by the admin screen.                           |
+| Session secret          | `SESSION_SECRET`   | auto-generated                 | For OAuth session management. Set a strong value in production.                                      |
+| Azure base URL          | `AZURE_BASE_URL`   | (none)                         | Your Azure App Service URL (e.g., `https://sello-xxx.azurewebsites.net`). Used for CORS and cookies. |
+| Server port             | `PORT`             | `3000`                         | `server.js` (`process.env.PORT`).                                                                    |
 
 **Google OAuth Configuration:**
 
-| Setting           | Env var                | Notes                                                                      |
-| ----------------- | ---------------------- | -------------------------------------------------------------------------- |
-| Client ID         | `GOOGLE_CLIENT_ID`     | From [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
-| Client Secret     | `GOOGLE_CLIENT_SECRET` | From Google Cloud Console                                                   |
-| Callback URL      | `GOOGLE_CALLBACK_URL`   | Must match exactly what's registered in Google Cloud Console               |
+| Setting       | Env var                | Notes                                                                          |
+| ------------- | ---------------------- | ------------------------------------------------------------------------------ |
+| Client ID     | `GOOGLE_CLIENT_ID`     | From [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
+| Client Secret | `GOOGLE_CLIENT_SECRET` | From Google Cloud Console                                                      |
+| Callback URL  | `GOOGLE_CALLBACK_URL`  | Must match exactly what's registered in Google Cloud Console                   |
 
 For Google OAuth, you need to:
+
 1. Create OAuth 2.0 credentials in Google Cloud Console
 2. Set authorized redirect URI to your callback URL (e.g., `https://your-app.azurewebsites.net/auth/google/callback`)
 3. Upload app branding icon (256x256 PNG) in OAuth consent screen settings
@@ -275,11 +276,11 @@ EMAIL_USER=you@gmail.com EMAIL_PASS="your app password" npm start
 
 ```json
 {
-  "username": "rupa",
+  "username": "gautam",
   "password": "scrypt$<salt>$<hash>",
   "passwordEnc": "enc$<iv>$<tag>$<ciphertext>",
-  "email": "rupsa958@gmail.com",
-  "mobile": "+852 9123 4567",
+  "email": "gautam958@gmail.com",
+  "mobile": "+852 53451910",
   "role": "user",
   "createdAt": "2026-06-03T13:42:25.061Z",
   "lastLogin": "2026-06-03T16:28:43.582Z"
@@ -305,7 +306,7 @@ decrypted without the server-side key.
   "enabled": true,
   "bids": [
     {
-      "userId": "rupa",
+      "userId": "gautam",
       "bidAmount": 100,
       "timestamp": "2026-06-03T13:55:31.082Z"
     }
