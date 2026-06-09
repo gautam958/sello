@@ -35,8 +35,7 @@ Pages) talking to a Node API (Azure Web App).
   (in **HK$**), live bid count, and an availability status badge (`index.html`).
 - **Marketplace filters & randomized order** — a filter bar sits above the item grid with a
   **search** input (matches name + description), a **status** dropdown (All / Available /
-  Booked / Pickup Scheduled / Sold), a **sort** dropdown (Default / Price ↑ / Price ↓ /
-  Most Bids / Name A→Z), and a **Reset** button. By default the first item from the server
+  Booked / Pickup Scheduled / Sold), a **sort** dropdown (Default / Price ↑ / Price ↓ / Most Bids / Name A→Z / Biggest Discount), and a **Reset** button. By default the first item from the server
   is pinned as a **featured** card at the top and the remaining items are shuffled on every
   page load (Fisher–Yates), so items that would otherwise sit at the bottom regularly surface
   near the top. Choosing any explicit sort overrides the random order; Reset restores the
@@ -104,20 +103,7 @@ Pages) talking to a Node API (Azure Web App).
 - **Live Activity sidebar** — a floating right-side panel showing the **5 most recent bids**
   across all items. Bids are shuffled randomly for variety, refreshing every 10 seconds with a
   fade-in animation. Users can click a bid to scroll to that item in the marketplace.
-- **Wishlist feature** — users can click the ♥ heart button on any item card to add it to their
-  wishlist. Unauthenticated users are prompted to log in. Wishlisted items are stored in
-  `wishlist.json` with user details (email, mobile). Toast notifications confirm actions.
-- **Admin Wishlist Management** — a dedicated **Wishlists** page (`admin-wishlist.html`, top-menu
-  link, admin only) displays KPI cards (total wishlists, unique users, most wishlisted item) and
-  a table with item name, user, email, mobile, price, and date. Admins can click **Contact** to
-  send a pre-filled email to the user with item details, price, status, and pickup location.
-  Admins can also delete wishlist entries.
 - **App icon** — an SVG favicon (`favicon.svg`) is linked from every page.
-- **Contact page** — a dedicated **Contact** page (`contact.html`, top-menu link for all users)
-  displays contact information (email, WhatsApp, website) and a contact form that sends an
-  email to the owner.
-- **Forgot password** — users can reset their password via a 6-digit code sent to their email.
-  The login page has a "Forgot Password?" link that opens a modal for the reset flow.
 - **Zero-database persistence** — users and items are stored in `users.json` / `items.json`;
   uploaded images are stored on disk.
 
@@ -176,11 +162,15 @@ sello/
 ├── users.html         # Admin User Management page (CRUD + viewable passwords)
 ├── logs.html          # Admin Activity Logs page (audit trail viewer)
 ├── visitors.html      # Admin Visitor Analytics page (geo + KPI dashboard)
+├── wishlist.html      # User wishlist page (view/save items)
+├── admin-wishlist.html # Admin Wishlist Management page (KPI + contact/delete)
+├── contact.html       # Contact page (info cards + message form)
 ├── favicon.svg        # App icon (sell / price-tag), linked from every page
 ├── items.json         # Seed/persisted product data
 ├── users.json         # Seed/persisted user accounts
 ├── logs.json          # Append-only activity log (auto-created, capped at 1000)
 ├── visitors.json      # Visitor records (auto-created, capped at 5000)
+├── wishlist.json      # Wishlist entries (auto-created)
 ├── Images/            # Uploaded / seed product images
 ├── package.json       # Dependencies and `npm start` script
 └── .github/workflows/ # Azure (API) + GitHub Pages (frontend) deployments
@@ -300,6 +290,7 @@ decrypted without the server-side key.
   "name": "Vintage Leather Jacket",
   "description": "Genuine brown leather jacket, size L.",
   "price": 120,
+  "discount": 10,
   "status": "Available",
   "bookedUser": "",
   "image": "/images/jacket.jpg",
@@ -315,8 +306,10 @@ decrypted without the server-side key.
 }
 ```
 
-`status` is `"Available"` or `"Booked"`; when `Booked`, `bookedUser` holds the username the
-item is reserved for (prices are displayed to users in **HK$**).
+`status` is `"Available"`, `"Booked"`, `"Pickup Scheduled"`, or `"Sold"`; when `Booked`,
+`bookedUser` holds the username the item is reserved for. `discount` is a percentage (0–90)
+set by the admin; the frontend calculates and displays the discounted price as `price × (1 -
+discount / 100)`. Prices are displayed to users in **HK$**.
 
 ## API Reference
 
@@ -327,19 +320,31 @@ Base path: `/api`
 | `POST`   | `/api/signup`                | none  | `{ username, email, password, mobile }`                          | Register a new `user` (mobile required; password hashed + encrypted); emails the owner.                |
 | `POST`   | `/api/login`                 | none  | `{ username, password }`                                         | Authenticate; returns user (no pw) **and a signed `token`**; emails the owner.                         |
 | `GET`    | `/api/items`                 | none  | —                                                                | List **enabled** items with display fields only (`bidsCount`, `highestBid`; no `bids[]`/`bookedUser`). |
-| `POST`   | `/api/items/book/:id`        | user  | `{ user, bidAmount }`                                            | Place a bid; emails the owner and the bidder.                                                          |
+| `GET`    | `/api/recent-bids`           | none  | —                                                                | Get 5 recent bids across all items (shuffled for variety) for the Live Activity sidebar.              |
+| `POST`   | `/api/items/book/:id`        | user  | `{ bidAmount }`                                                  | Place a bid; emails the owner and the bidder.                                                         |
 | `GET`    | `/api/admin/users`           | admin | —                                                                | List all users incl. recovered plaintext password (for the admin screen).                              |
 | `POST`   | `/api/admin/users`           | admin | `{ username, email, mobile, role, password }`                    | Create a user (password hashed + encrypted).                                                           |
 | `PUT`    | `/api/admin/users/:username` | admin | `{ email?, mobile?, role?, password? }`                          | Update a user; re-hashes/encrypts when a new password is given.                                        |
 | `DELETE` | `/api/admin/users/:username` | admin | —                                                                | Delete a user (cannot delete your own account).                                                        |
-| `POST`   | `/api/admin/items`           | admin | `multipart/form-data` (fields + `image`, `status`, `bookedUser`) | Create a product; emails on booking.                                                                   |
-| `PUT`    | `/api/admin/items/:id`       | admin | `multipart/form-data` (fields + `image`, `status`, `bookedUser`) | Update a product; emails when newly booked.                                                            |
+| `POST`   | `/api/admin/items`           | admin | `multipart/form-data` (fields + `image`, `status`, `bookedUser`, `discount`) | Create a product; emails on booking.                                                            |
+| `PUT`    | `/api/admin/items/:id`       | admin | `multipart/form-data` (fields + `image`, `status`, `bookedUser`, `discount`) | Update a product; emails when newly booked.                                                     |
 | `DELETE` | `/api/admin/items/:id`       | admin | —                                                                | Delete a product + its image.                                                                          |
 | `GET`    | `/api/admin/logs`            | admin | `?type=&limit=` (query, optional)                                | List activity logs newest-first; optional filter by `type` and cap by `limit`.                         |
 | `DELETE` | `/api/admin/logs`            | admin | —                                                                | Clear all activity logs.                                                                               |
 | `POST`   | `/api/track`                 | none  | `{ visitorId, path, referrer }`                                  | Record a visit; server adds hashed IP, geo (city/country), UA, and links to logged-in user if any.     |
 | `GET`    | `/api/admin/visitors`        | admin | —                                                                | List visitor records newest-first with location, device, path history, and visit counts.               |
 | `DELETE` | `/api/admin/visitors`        | admin | —                                                                | Clear all visitor records.                                                                             |
+| `GET`    | `/api/wishlist`              | user  | —                                                                | Get current user's wishlist entries.                                                                   |
+| `POST`   | `/api/wishlist`              | user  | `{ itemId }`                                                     | Add an item to the user's wishlist.                                                                   |
+| `DELETE` | `/api/wishlist/:itemId`      | user  | —                                                                | Remove an item from the user's wishlist.                                                               |
+| `GET`    | `/api/admin/wishlist`        | admin | —                                                                | List all wishlist entries (newest first).                                                              |
+| `POST`   | `/api/admin/wishlist/contact`| admin | `{ wishlistId, message }`                                        | Send a pre-filled email to a wishlisted user.                                                         |
+| `DELETE` | `/api/admin/wishlist/:id`    | admin | —                                                                | Delete a wishlist entry.                                                                              |
+| `POST`   | `/api/contact`               | none  | `{ name, email, subject, message }`                              | Send a contact form message to the owner.                                                             |
+| `POST`   | `/api/auth/forgot-password`  | none  | `{ email }`                                                      | Send a 6-digit password reset code to the user's email.                                               |
+| `POST`   | `/api/auth/reset-password`   | none  | `{ email, code, newPassword }`                                   | Verify the reset code and update the password.                                                        |
+| `GET`    | `/auth/google`               | none  | `?return=` (query, optional)                                     | Initiate Google OAuth login flow.                                                                     |
+| `GET`    | `/auth/google/callback`      | none  | —                                                                | Google OAuth callback; redirects with token and user data.                                            |
 
 Admin routes (`admin` in the table) are verified **server-side**: the request must carry a
 valid `Authorization: Bearer <token>` whose payload has `role === "admin"`. Missing/invalid
@@ -356,15 +361,18 @@ curl -X POST http://localhost:3000/api/items/book/1 \
 
 ## Frontend Pages
 
-| Page            | Purpose                                                                                                                                          |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `index.html`    | Marketplace grid with filter bar (search, status, sort, reset); first item featured, rest shuffled; opens the bid modal (login required to bid). |
-| `login.html`    | Sign in; admins are redirected to `admin.html`, users to `index.html`.                                                                           |
-| `signup.html`   | Register a new account (mobile number + client-side password confirmation).                                                                      |
-| `admin.html`    | Product CRUD, image upload, visibility toggle, bid history, and status/booking.                                                                  |
-| `users.html`    | **Manage Users** (admin only): create/edit/delete users + viewable passwords (show/hide).                                                        |
-| `logs.html`     | **Logs** (admin only): activity audit trail with type filter, refresh, and clear.                                                                |
-| `visitors.html` | **Visitors** (admin only): visitor analytics with KPI cards, geo, and device breakdown.                                                          |
+| Page              | Purpose                                                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `index.html`      | Marketplace grid with filter bar (search, status, sort, reset); first item featured, rest shuffled; opens the bid modal (login required to bid). |
+| `login.html`      | Sign in; admins are redirected to `admin.html`, users to `index.html`.                                                                           |
+| `signup.html`     | Register a new account (mobile number + client-side password confirmation).                                                                      |
+| `admin.html`      | Product CRUD, image upload, visibility toggle, bid history, and status/booking.                                                                  |
+| `users.html`      | **Manage Users** (admin only): create/edit/delete users + viewable passwords (show/hide).                                                        |
+| `logs.html`       | **Logs** (admin only): activity audit trail with type filter, refresh, and clear.                                                                |
+| `visitors.html`   | **Visitors** (admin only): visitor analytics with KPI cards, geo, and device breakdown.                                                          |
+| `wishlist.html`   | **My Wishlist** (user): view and remove saved items.                                                                                             |
+| `admin-wishlist.html` | **Wishlists** (admin only): KPI cards, user interest tracking, contact via email, delete entries.                                            |
+| `contact.html`    | **Contact** (all users): contact information cards and a message form that emails the owner.                                                     |
 
 Each page calls `initApp("<page>")`, which wires up the navbar and the page-specific logic in
 `script.js`. The **Manage Users**, **Logs**, and **Visitors** links appear in the top menu
