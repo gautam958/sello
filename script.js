@@ -402,6 +402,21 @@ function initLiveActivity() {
     toggle.textContent = panel.classList.contains("collapsed") ? "▲" : "▼";
   });
 
+  // Collapsed indicator click to expand
+  const collapsedIndicator = document.getElementById("live-collapsed-indicator");
+  if (collapsedIndicator) {
+    collapsedIndicator.addEventListener("click", () => {
+      panel.classList.remove("collapsed");
+      toggle.textContent = "▼";
+    });
+  }
+
+  // On mobile (<=1024px), collapse panel by default
+  if (window.innerWidth <= 1024) {
+    panel.classList.add("collapsed");
+    toggle.textContent = "▲";
+  }
+
   // Initial load
   fetchAndShuffleLiveBids();
 
@@ -423,43 +438,65 @@ async function fetchAndShuffleLiveBids() {
   } catch (err) {
     // Silently fail - live panel is non-critical
   }
-}
-
-function renderLiveBids(bids, container) {
+}function renderLiveBids(bids, container) {
   if (!bids || bids.length === 0) {
     container.innerHTML = '<div class="live-empty">No bids yet</div>';
     return;
   }
 
-  container.innerHTML = bids
-    .map((bid, index) => {
-      const imgSrc = resolveImageSrc(
-        bid.itemImage,
-        "https://placehold.co/80x60?text=No+Image",
-      );
-      // Status badge only for non-Available items
-      const statusBadge =
-        bid.itemStatus && bid.itemStatus !== "Available"
-          ? `<span class="live-bid-status-badge live-bid-status-${bid.itemStatus.toLowerCase().replace(/\s+/g, "-")}">${bid.itemStatus.toUpperCase()}</span>`
-          : "";
-      // Discount badge for live bids
-      const bidDiscount = parseInt(bid.discount, 10) || 0;
-      const discountBadge =
-        bidDiscount > 0
-          ? `<span class="discount-badge discount-badge-live">★ ${bidDiscount}% OFF</span>`
-          : "";
-      return `
-    <div class="live-bid-item fade-in" style="animation-delay: ${index * 80}ms" onclick="scrollToItem('${bid.itemId}')">
+  // Remember existing item IDs to detect new ones
+  const prevIds = new Set(
+    Array.from(container.querySelectorAll(".live-bid-item")).map((el) =>
+      el.getAttribute("data-bid-id"),
+    ),
+  );
+
+  // Clear container and append items one-by-one for staggered entrance
+  container.innerHTML = "";
+
+  bids.forEach((bid, index) => {
+    const imgSrc = resolveImageSrc(
+      bid.itemImage,
+      "https://placehold.co/80x60?text=No+Image",
+    );
+    const statusBadge =
+      bid.itemStatus && bid.itemStatus !== "Available"
+        ? `<span class="live-bid-status-badge live-bid-status-${bid.itemStatus.toLowerCase().replace(/\s+/g, "-")}">${bid.itemStatus.toUpperCase()}</span>`
+        : "";
+    const bidDiscount = parseInt(bid.discount, 10) || 0;
+    const discountBadge =
+      bidDiscount > 0
+        ? `<span class="discount-badge discount-badge-live">★ ${bidDiscount}% OFF</span>`
+        : "";
+
+    const item = document.createElement("div");
+    item.className = "live-bid-item";
+    item.setAttribute("data-bid-id", bid.itemId);
+    item.setAttribute("onclick", `scrollToItem('${bid.itemId}')`);
+    item.innerHTML = `
       <img src="${imgSrc}" alt="${escapeHtml(bid.itemName)}" class="live-bid-img" onerror="this.src='https://placehold.co/80x60?text=No+Image'; this.onerror=null;">
       <div class="live-bid-content">
         <div class="live-bid-amount">HK$ ${bid.amount.toLocaleString()} ${statusBadge} ${discountBadge}</div>
         <div class="live-bid-name">${escapeHtml(bid.itemName)}</div>
         <div class="live-bid-time">${formatTimeAgo(bid.timestamp)}</div>
       </div>
-    </div>
-  `;
-    })
-    .join("");
+    `;
+    container.appendChild(item);
+
+    // Staggered slide-in: each item appears 90ms after the previous
+    const delay = index * 90;
+    setTimeout(() => {
+      item.classList.add("visible");
+      // Highlight new items briefly
+      if (!prevIds.has(bid.itemId)) {
+        item.classList.add("highlight");
+        setTimeout(() => {
+          item.classList.remove("highlight");
+          item.classList.add("highlight-fade");
+        }, 800);
+      }
+    }, delay);
+  });
 }
 
 function scrollToItem(itemId) {
@@ -470,6 +507,14 @@ function scrollToItem(itemId) {
     setTimeout(() => {
       itemCard.style.boxShadow = "";
     }, 2000);
+  }
+
+  // Collapse the live bid panel after clicking an item
+  const panel = document.getElementById("live-activity-panel");
+  const toggle = document.getElementById("live-panel-toggle");
+  if (panel && !panel.classList.contains("collapsed")) {
+    panel.classList.add("collapsed");
+    if (toggle) toggle.textContent = "▲";
   }
 }
 
