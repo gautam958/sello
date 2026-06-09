@@ -25,6 +25,47 @@
       </span>
     </div>
 
+    <!-- WebView Warning Banner -->
+    <div id="webview-warning" style="display: none">
+      <div class="webview-banner" style="
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 1px solid #f59e0b;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin: 1rem auto;
+        max-width: 400px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+        opacity: 0;
+      ">
+        <div class="webview-icon" style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
+        <h3 class="webview-title" style="color: #92400e; margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 700;">
+          In-App Browser Detected
+        </h3>
+        <p class="webview-desc" style="color: #78350f; margin: 0 0 0.75rem 0; font-size: 0.875rem; line-height: 1.5;">
+          Google Sign-In doesn't work inside app browsers like Facebook, Instagram, or WhatsApp.
+        </p>
+        <a
+          id="open-in-browser-btn"
+          href="#"
+          class="webview-btn"
+          style="
+            display: inline-block;
+            background: #1a73e8;
+            color: white;
+            padding: 0.6rem 1.25rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.875rem;
+          "
+        >Open in Chrome / Safari</a>
+        <p class="webview-note" style="color: #92400e; margin: 0.75rem 0 0 0; font-size: 0.8rem; opacity: 0;">
+          You can still sign in with username & password below
+        </p>
+      </div>
+    </div>
+
     <main class="container container--wide">
       <div class="form-container">
         <h2 style="margin-bottom: 1.5rem; text-align: center">Login</h2>
@@ -202,6 +243,49 @@
 
     <script src="script.js"></script>
     <script>
+      // ─── WebView Detection ───────────────────────────────────────────────
+      (function detectWebView() {
+        const ua = navigator.userAgent || '';
+        const webviewPatterns = [
+          /FBAN|FBAV/i,                    // Facebook
+          /Instagram/i,                     // Instagram
+          /WhatsApp/i,                      // WhatsApp
+          /Line\//i,                        // LINE
+          /Twitter/i,                       // Twitter/X
+          /Messenger/i,                     // Messenger
+          /Snapchat/i,                      // Snapchat
+          /Pinterest/i,                     // Pinterest
+          /Tumblr/i,                        // Tumblr
+          /Flipboard/i,                     // Flipboard
+          /WeChat|MicroMessenger/i,         // WeChat
+          /KAKAOTALK/i,                     // KakaoTalk
+          /Viber/i,                         // Viber
+          /Telegram/i,                      // Telegram
+          /wv\b|Android.*wv/i              // Android WebView (generic)
+        ];
+
+        const isWebView = webviewPatterns.some(function (re) {
+          return re.test(ua);
+        });
+
+        if (isWebView) {
+          var banner = document.getElementById('webview-warning');
+          if (banner) {
+            banner.style.display = 'block';
+            // Force reflow to trigger animation
+            void banner.offsetHeight;
+          }
+
+          // Set "Open in Browser" link: try current URL without in-app browser
+          var openBtn = document.getElementById('open-in-browser-btn');
+          if (openBtn) {
+            openBtn.href = window.location.href;
+            openBtn.target = '_self';
+            openBtn.rel = 'noopener';
+          }
+        }
+      })();
+
       document.addEventListener("DOMContentLoaded", () => {
         initApp("login");
 
