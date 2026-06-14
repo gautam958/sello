@@ -17,10 +17,11 @@
       <span id="marquee-wrapper">
         <span id="marquee-countdown"></span>
         <span
-          >🚚 Move‑Out Sale! All items pickup from Coastal Skyline, Tung Chung –
-          all bids are considered and once owner confirm you will received
-          detailed instructions on your email, signup and book your items,
-          pickup before 14 June 2026.</span
+          >Please note, Sale End, better luck next time, 🚚 Move‑Out Sale! All
+          items pickup from Coastal Skyline, Tung Chung – all bids are
+          considered and once owner confirm you will received detailed
+          instructions on your email, signup and book your items, pickup before
+          14 June 2026.</span
         >
         <span id="marquee-countdown-end"></span>
       </span>
@@ -28,23 +29,48 @@
 
     <!-- WebView Warning Banner -->
     <div id="webview-warning" style="display: none">
-      <div class="webview-banner" style="
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        border: 1px solid #f59e0b;
-        border-radius: 12px;
-        padding: 1.25rem;
-        margin: 1rem auto;
-        max-width: 400px;
-        text-align: center;
-        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
-        opacity: 0;
-      ">
-        <div class="webview-icon" style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
-        <h3 class="webview-title" style="color: #92400e; margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 700;">
+      <div
+        class="webview-banner"
+        style="
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border: 1px solid #f59e0b;
+          border-radius: 12px;
+          padding: 1.25rem;
+          margin: 1rem auto;
+          max-width: 400px;
+          text-align: center;
+          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+          opacity: 0;
+        "
+      >
+        <div
+          class="webview-icon"
+          style="font-size: 2rem; margin-bottom: 0.5rem"
+        >
+          ⚠️
+        </div>
+        <h3
+          class="webview-title"
+          style="
+            color: #92400e;
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+            font-weight: 700;
+          "
+        >
           In-App Browser Detected
         </h3>
-        <p class="webview-desc" style="color: #78350f; margin: 0 0 0.75rem 0; font-size: 0.875rem; line-height: 1.5;">
-          Google Sign-In doesn't work inside app browsers like Facebook, Instagram, or WhatsApp.
+        <p
+          class="webview-desc"
+          style="
+            color: #78350f;
+            margin: 0 0 0.75rem 0;
+            font-size: 0.875rem;
+            line-height: 1.5;
+          "
+        >
+          Google Sign-In doesn't work inside app browsers like Facebook,
+          Instagram, or WhatsApp.
         </p>
         <a
           id="open-in-browser-btn"
@@ -60,8 +86,17 @@
             font-weight: 600;
             font-size: 0.875rem;
           "
-        >Open in Chrome / Safari</a>
-        <p class="webview-note" style="color: #92400e; margin: 0.75rem 0 0 0; font-size: 0.8rem; opacity: 0;">
+          >Open in Chrome / Safari</a
+        >
+        <p
+          class="webview-note"
+          style="
+            color: #92400e;
+            margin: 0.75rem 0 0 0;
+            font-size: 0.8rem;
+            opacity: 0;
+          "
+        >
           You can still register with username & password below
         </p>
       </div>
@@ -159,23 +194,23 @@
     <script>
       // ─── WebView Detection ───────────────────────────────────────────────
       (function detectWebView() {
-        var ua = navigator.userAgent || '';
+        var ua = navigator.userAgent || "";
         var webviewPatterns = [
-          /FBAN|FBAV/i,                    // Facebook
-          /Instagram/i,                     // Instagram
-          /WhatsApp/i,                      // WhatsApp
-          /Line\//i,                        // LINE
-          /Twitter/i,                       // Twitter/X
-          /Messenger/i,                     // Messenger
-          /Snapchat/i,                      // Snapchat
-          /Pinterest/i,                     // Pinterest
-          /Tumblr/i,                        // Tumblr
-          /Flipboard/i,                     // Flipboard
-          /WeChat|MicroMessenger/i,         // WeChat
-          /KAKAOTALK/i,                     // KakaoTalk
-          /Viber/i,                         // Viber
-          /Telegram/i,                      // Telegram
-          /wv\b|Android.*wv/i              // Android WebView (generic)
+          /FBAN|FBAV/i, // Facebook
+          /Instagram/i, // Instagram
+          /WhatsApp/i, // WhatsApp
+          /Line\//i, // LINE
+          /Twitter/i, // Twitter/X
+          /Messenger/i, // Messenger
+          /Snapchat/i, // Snapchat
+          /Pinterest/i, // Pinterest
+          /Tumblr/i, // Tumblr
+          /Flipboard/i, // Flipboard
+          /WeChat|MicroMessenger/i, // WeChat
+          /KAKAOTALK/i, // KakaoTalk
+          /Viber/i, // Viber
+          /Telegram/i, // Telegram
+          /wv\b|Android.*wv/i, // Android WebView (generic)
         ];
 
         var isWebView = webviewPatterns.some(function (re) {
@@ -183,18 +218,18 @@
         });
 
         if (isWebView) {
-          var banner = document.getElementById('webview-warning');
+          var banner = document.getElementById("webview-warning");
           if (banner) {
-            banner.style.display = 'block';
+            banner.style.display = "block";
             // Force reflow to trigger animation
             void banner.offsetHeight;
           }
 
-          var openBtn = document.getElementById('open-in-browser-btn');
+          var openBtn = document.getElementById("open-in-browser-btn");
           if (openBtn) {
             openBtn.href = window.location.href;
-            openBtn.target = '_self';
-            openBtn.rel = 'noopener';
+            openBtn.target = "_self";
+            openBtn.rel = "noopener";
           }
         }
       })();

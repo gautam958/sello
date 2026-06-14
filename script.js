@@ -216,23 +216,84 @@ async function loadUserWishlistPage() {
 // ─── Countdown Timer ───────────────────────────────────────────────────────
 const SALE_END_DATE = new Date("2026-06-14T23:59:59");
 
+function isSaleEnded() {
+  return new Date() >= SALE_END_DATE;
+}
+
+function disableBookItemButtons() {
+  document.querySelectorAll(".open-bid-modal-btn").forEach((btn) => {
+    btn.disabled = true;
+    btn.classList.remove("open-bid-modal-btn");
+    btn.classList.add("btn-status-sold");
+    btn.innerHTML = "<s>Sale End</s>";
+  });
+}
+
 function startCountdown() {
   const countdownEl = document.getElementById("countdown-text");
-  const marqueeStartEl = document.getElementById("marquee-countdown");
-  const marqueeEndEl = document.getElementById("marquee-countdown-end");
+  const saleEndNote = document.getElementById("sale-end-note");
+  const marqueeWrapper = document.getElementById("marquee-wrapper");
 
-  if (!countdownEl && !marqueeStartEl) return;
+  if (!countdownEl && !marqueeWrapper) return;
+
+  let countdownInterval = null;
+
+  function onSaleEnd() {
+    if (countdownInterval) clearInterval(countdownInterval);
+    // Task 1: Update countdown text and badge background
+    if (countdownEl) countdownEl.textContent = "Sale has ended!";
+    const badge = document.getElementById("countdown-badge");
+    if (badge) {
+      badge.style.background = "linear-gradient(135deg, #ef4444, #dc2626)";
+      badge.style.boxShadow = "0 2px 12px rgba(239, 68, 68, 0.4)";
+    }
+    // Task 1: Disable all Book Item buttons
+    disableBookItemButtons();
+    // Stop live bids from updating
+    if (liveInterval) {
+      clearInterval(liveInterval);
+      liveInterval = null;
+    }
+    // Turn all live dots red and stop pulse
+    document
+      .querySelectorAll(".live-dot, .live-dot-collapsed")
+      .forEach((dot) => {
+        dot.style.background = "#ef4444";
+        dot.style.boxShadow = "0 0 8px rgba(239, 68, 68, 0.5)";
+        dot.style.animation = "none";
+      });
+    // Red border on live bids panel
+    const livePanel = document.getElementById("live-activity-panel");
+    if (livePanel) {
+      livePanel.style.border = "2px solid #ef4444";
+      livePanel.style.boxShadow = "0 0 12px rgba(239, 68, 68, 0.3)";
+    }
+    // Show "Live bids ended" message
+    const liveBidsContainer = document.getElementById("live-bids-container");
+    if (liveBidsContainer) {
+      liveBidsContainer.innerHTML =
+        '<div class="live-empty" style="color:#ef4444;font-weight:600;">Live bids ended</div>';
+    }
+    // Task 2: Append "Sale End, better luck next time" to marquee
+    if (marqueeWrapper) {
+      const innerSpan = marqueeWrapper.querySelector("span") || marqueeWrapper;
+      if (!innerSpan.dataset.saleEnded) {
+        const currentText = innerSpan.textContent.trim();
+        innerSpan.textContent =
+          currentText + "Please note, Sale End, better luck next time";
+        innerSpan.dataset.saleEnded = "1";
+      }
+    }
+    // Task 3: Show "Sale End." note under countdown
+    if (saleEndNote) saleEndNote.style.display = "block";
+  }
 
   function update() {
     const now = new Date();
     const diff = SALE_END_DATE - now;
 
     if (diff <= 0) {
-      if (countdownEl) countdownEl.textContent = "Sale has ended!";
-      if (marqueeStartEl)
-        marqueeStartEl.textContent =
-          "🚚 Sale has ended! Pickup remaining items by June 16.";
-      if (marqueeEndEl) marqueeEndEl.textContent = "";
+      onSaleEnd();
       return;
     }
 
@@ -245,15 +306,18 @@ function startCountdown() {
       days > 0
         ? `${days}d ${hours}h ${minutes}m ${seconds}s left`
         : `${hours}h ${minutes}m ${seconds}s left`;
-    const marqueeText = `⏰ Sale ends in ${shortText} —`;
 
     if (countdownEl) countdownEl.textContent = shortText;
-    if (marqueeStartEl) marqueeStartEl.textContent = marqueeText;
-    if (marqueeEndEl) marqueeEndEl.textContent = marqueeText;
+  }
+
+  // If sale already ended at page load, apply immediately
+  if (isSaleEnded()) {
+    onSaleEnd();
+    return;
   }
 
   update();
-  setInterval(update, 1000);
+  countdownInterval = setInterval(update, 1000);
 }
 
 // ─── Wishlist Functions ─────────────────────────────────────────────────────
@@ -403,7 +467,9 @@ function initLiveActivity() {
   });
 
   // Collapsed indicator click to expand
-  const collapsedIndicator = document.getElementById("live-collapsed-indicator");
+  const collapsedIndicator = document.getElementById(
+    "live-collapsed-indicator",
+  );
   if (collapsedIndicator) {
     collapsedIndicator.addEventListener("click", () => {
       panel.classList.remove("collapsed");
@@ -420,9 +486,11 @@ function initLiveActivity() {
   // Initial load
   fetchAndShuffleLiveBids();
 
-  // Refresh every 15 seconds
-  if (liveInterval) clearInterval(liveInterval);
-  liveInterval = setInterval(fetchAndShuffleLiveBids, 15000);
+  // Refresh every 15 seconds (skip if sale already ended)
+  if (!isSaleEnded()) {
+    if (liveInterval) clearInterval(liveInterval);
+    liveInterval = setInterval(fetchAndShuffleLiveBids, 15000);
+  }
 }
 
 async function fetchAndShuffleLiveBids() {
@@ -438,7 +506,8 @@ async function fetchAndShuffleLiveBids() {
   } catch (err) {
     // Silently fail - live panel is non-critical
   }
-}function renderLiveBids(bids, container) {
+}
+function renderLiveBids(bids, container) {
   if (!bids || bids.length === 0) {
     container.innerHTML = '<div class="live-empty">No bids yet</div>';
     return;
@@ -775,7 +844,7 @@ function renderMarketplaceItems(visibleItems) {
               ? "status-sold"
               : "status-available";
       const statusLabel = item.status || "Available";
-      const canBid = item.status === "Available";
+      const canBid = item.status === "Available" && !isSaleEnded();
 
       const priceHTML = hasDiscount
         ? `<div class="price-container">
@@ -816,7 +885,9 @@ function renderMarketplaceItems(visibleItems) {
                     ${
                       canBid
                         ? `<button class="btn btn-status-available open-bid-modal-btn" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}" data-highest="${topBidValue}" data-discount="${hasDiscount ? discount : 0}" data-discounted-price="${hasDiscount ? discountedPrice : ""}">Book Item</button>`
-                        : `<button class="btn btn-status-${item.status.toLowerCase().replace(/\s+/g, "-")}" disabled>${item.status}</button>`
+                        : item.status === "Available" && isSaleEnded()
+                          ? `<button class="btn btn-status-sold" disabled><s>Sale End</s></button>`
+                          : `<button class="btn btn-status-${item.status.toLowerCase().replace(/\s+/g, "-")}" disabled>${item.status}</button>`
                     }
                     </div>
                 </div>
