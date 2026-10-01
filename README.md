@@ -507,3 +507,11 @@ use as a build spec) to reconstruct this application:
 >   Manage Users page (top-menu link shown only to admins) with a create form and a table
 >   (username, email, mobile, password with show/hide toggle, role, created, last login,
 >   edit/delete). In the admin booking dropdown, label users as `username | email | mobile`.
+
+## OpenAPI / MCP tools
+
+The API's OpenAPI 3.1 specification is available at `/openapi.yaml` (for example,
+`https://<your-api-host>/openapi.yaml`). Point an OpenAPI-backed MCP tool generator at
+that URL to generate tools for the documented Sello API operations. Authenticated
+operations use the JWT returned by `POST /api/login` as an HTTP Bearer token; admin
+operations also require an administrator account.

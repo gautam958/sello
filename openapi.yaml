@@ -1,0 +1,512 @@
+openapi: 3.1.0
+info:
+  title: Sello API
+  version: 1.0.0
+  description: >-
+    Marketplace, account, wishlist, and administration API. This document is
+    served at /openapi.yaml and can be used as an OpenAPI source by MCP tool
+    generators. Authenticated endpoints accept the JWT returned by POST /api/login
+    as a Bearer token.
+servers:
+  - url: /
+    description: Current Sello server
+tags:
+  - name: Authentication
+  - name: Marketplace
+  - name: Wishlist
+  - name: Administration
+  - name: Analytics
+  - name: Contact
+paths:
+  /api/signup:
+    post:
+      tags: [Authentication]
+      operationId: signUp
+      summary: Create a user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password, mobile]
+              properties:
+                username: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+                mobile: { type: string }
+      responses:
+        '201': { description: Account created }
+        '400': { description: Missing mobile number or username already exists }
+        '500': { description: Account could not be created }
+  /api/login:
+    post:
+      tags: [Authentication]
+      operationId: login
+      summary: Sign in and receive a JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: Authenticated user and bearer token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  user: { $ref: '#/components/schemas/User' }
+                  token: { type: string }
+        '401': { description: Invalid credentials }
+  /api/auth/forgot-password:
+    post:
+      tags: [Authentication]
+      operationId: requestPasswordReset
+      summary: Request a password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+                username: { type: string }
+      responses:
+        '200': { description: Reset request processed }
+        '400': { description: Invalid request }
+  /api/auth/reset-password:
+    post:
+      tags: [Authentication]
+      operationId: resetPassword
+      summary: Reset a password using a reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, format: password }
+      responses:
+        '200': { description: Password reset }
+        '400': { description: Invalid or expired reset token }
+  /api/items:
+    get:
+      tags: [Marketplace]
+      operationId: listItems
+      summary: List enabled marketplace items
+      responses:
+        '200':
+          description: Public item details
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Item' }
+  /api/recent-bids:
+    get:
+      tags: [Marketplace]
+      operationId: listRecentBids
+      summary: Get up to five recent bids
+      responses:
+        '200':
+          description: Bid activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RecentBid' }
+  /api/items/book/{id}:
+    post:
+      tags: [Marketplace]
+      operationId: placeBid
+      summary: Place a bid on an item
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bidAmount]
+              properties:
+                bidAmount: { type: number, minimum: 0 }
+      responses:
+        '200': { description: Bid accepted or item booked }
+        '400': { description: Bid is invalid }
+        '401': { description: Authentication required }
+        '404': { description: Item not found }
+  /api/wishlist:
+    get:
+      tags: [Wishlist]
+      operationId: getWishlist
+      summary: Get the authenticated user's wishlist
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Wishlist entries
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WishlistEntry' } }
+        '401': { description: Authentication required }
+    post:
+      tags: [Wishlist]
+      operationId: addWishlistItem
+      summary: Add an item to the authenticated user's wishlist
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [itemId]
+              properties:
+                itemId: { type: string }
+      responses:
+        '200': { description: Item added }
+        '400': { description: Missing or duplicate item }
+        '401': { description: Authentication required }
+        '404': { description: Item not found }
+  /api/wishlist/{itemId}:
+    delete:
+      tags: [Wishlist]
+      operationId: removeWishlistItem
+      summary: Remove an item from the authenticated user's wishlist
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: itemId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Item removed }
+        '401': { description: Authentication required }
+  /api/admin/items:
+    get:
+      tags: [Administration]
+      operationId: adminListItems
+      summary: List all items, including disabled items and bids
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Full item records }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+    post:
+      tags: [Administration]
+      operationId: adminCreateItem
+      summary: Create a marketplace item
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, description, price]
+              properties:
+                name: { type: string }
+                description: { type: string }
+                price: { type: number }
+                discount: { type: integer, minimum: 0, maximum: 90 }
+                status: { type: string }
+                bookedUser: { type: string }
+                enabled: { type: boolean }
+                image: { type: string, format: binary }
+      responses:
+        '201': { description: Item created }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+  /api/admin/items/{id}:
+    put:
+      tags: [Administration]
+      operationId: adminUpdateItem
+      summary: Update a marketplace item
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                price: { type: number }
+                discount: { type: integer, minimum: 0, maximum: 90 }
+                status: { type: string }
+                bookedUser: { type: string }
+                enabled: { type: boolean }
+                image: { type: string, format: binary }
+      responses:
+        '200': { description: Item updated }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+        '404': { description: Item not found }
+    delete:
+      tags: [Administration]
+      operationId: adminDeleteItem
+      summary: Delete a marketplace item
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Item deleted }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+  /api/admin/users:
+    get:
+      tags: [Administration]
+      operationId: adminListUsers
+      summary: List user accounts
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: User accounts }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+    post:
+      tags: [Administration]
+      operationId: adminCreateUser
+      summary: Create a user account
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                email: { type: string, format: email }
+                mobile: { type: string }
+                role: { type: string, enum: [user, admin] }
+                password: { type: string, format: password }
+      responses:
+        '201': { description: User created }
+        '400': { description: Missing username or password }
+        '409': { description: Username already exists }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+  /api/admin/users/{username}:
+    put:
+      tags: [Administration]
+      operationId: adminUpdateUser
+      summary: Update a user account
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: username, in: path, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+                mobile: { type: string }
+                role: { type: string, enum: [user, admin] }
+                password: { type: string, format: password }
+      responses:
+        '200': { description: User updated }
+        '404': { description: User not found }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+    delete:
+      tags: [Administration]
+      operationId: adminDeleteUser
+      summary: Delete a user account
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: username, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: User deleted }
+        '400': { description: Cannot delete the current administrator }
+        '404': { description: User not found }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+  /api/admin/logs:
+    get:
+      tags: [Administration]
+      operationId: adminListLogs
+      summary: List activity logs
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: type, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Activity log entries }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+    delete:
+      tags: [Administration]
+      operationId: adminClearLogs
+      summary: Clear activity logs
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Logs cleared }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+  /api/admin/visitors:
+    get:
+      tags: [Administration]
+      operationId: adminListVisitors
+      summary: List visitor analytics
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Visitor records }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+    delete:
+      tags: [Administration]
+      operationId: adminClearVisitors
+      summary: Clear visitor analytics
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Visitor records cleared }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+  /api/admin/wishlist:
+    get:
+      tags: [Administration]
+      operationId: adminListWishlists
+      summary: List all wishlist entries
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Wishlist entries }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+  /api/admin/wishlist/contact:
+    post:
+      tags: [Administration]
+      operationId: adminContactWishlistUser
+      summary: Email a wishlist user about an item
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wishlistId, message]
+              properties:
+                wishlistId: { type: string }
+                message: { type: string }
+      responses:
+        '200': { description: Email sent }
+        '400': { description: Missing wishlistId or message }
+        '404': { description: Wishlist entry not found }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+  /api/admin/wishlist/{id}:
+    delete:
+      tags: [Administration]
+      operationId: adminDeleteWishlistEntry
+      summary: Delete a wishlist entry
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Wishlist entry deleted }
+        '401': { description: Authentication required }
+        '403': { description: Administrator role required }
+  /api/track:
+    post:
+      tags: [Analytics]
+      operationId: trackVisit
+      summary: Record a page visit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [visitorId]
+              properties:
+                visitorId: { type: string, maxLength: 64 }
+                path: { type: string }
+                referrer: { type: string }
+                computerName: { type: string }
+      responses:
+        '200': { description: Visit recorded }
+        '400': { description: Invalid visitor ID }
+  /api/contact:
+    post:
+      tags: [Contact]
+      operationId: sendContactMessage
+      summary: Send a contact form message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, subject, message]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                subject: { type: string }
+                message: { type: string }
+      responses:
+        '200': { description: Message sent }
+        '400': { description: Required fields missing }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        username: { type: string }
+        email: { type: string }
+        mobile: { type: string }
+        role: { type: string, enum: [user, admin] }
+        createdAt: { type: string, format: date-time }
+        lastLogin: { type: string, format: date-time }
+    Item:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        price: { type: number }
+        discount: { type: number }
+        status: { type: string }
+        image: { type: string }
+        bidsCount: { type: integer }
+        highestBid: { type: number }
+    RecentBid:
+      type: object
+      properties:
+        itemId: { type: string }
+        itemName: { type: string }
+        itemImage: { type: string }
+        itemPrice: { type: number }
+        discount: { type: number }
+        amount: { type: number }
+        timestamp: { type: string, format: date-time }
+        itemStatus: { type: string }
+    WishlistEntry:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        itemId: { type: string }
+        itemName: { type: string }
+        itemPrice: { type: number }
+        itemImage: { type: string }
+        addedAt: { type: string, format: date-time }
